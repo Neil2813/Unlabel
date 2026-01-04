@@ -1,4 +1,4 @@
-# Food Intelligence Co-pilot
+# Unlabel
 *An AI-Native Consumer Health Experience*
 
 ## 🧠 The Core Question
