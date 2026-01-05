@@ -11,7 +11,7 @@ interface IngredientTranslation {
 
 interface QuickInsight {
   summary: string;
-  uncertainty_reason?: string;
+  uncertainty_reason?: string | null;
 }
 
 interface ConsumerExplanation {
@@ -23,11 +23,13 @@ interface ConsumerExplanation {
 
 interface DecisionData {
   quick_insight: QuickInsight;
-  verdict: string;
+  verdict: "Daily" | "Occasional" | "Limit Frequent Use";
   explanation: ConsumerExplanation;
+  intent_classified: "quick_yes_no" | "comparison" | "risk_check" | "curiosity";
   key_signals: string[];
   ingredient_translations: IngredientTranslation[];
   uncertainty_flags: string[];
+  structured_analysis?: any; // Optional technical details
 }
 
 interface DecisionCardProps {
@@ -73,6 +75,16 @@ const getVerdictConfig = (verdict: string) => {
 
 export function DecisionCard({ decision }: DecisionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('DecisionCard rendered with:', decision);
+  }, [decision]);
+  
+  if (!decision) {
+    return <div className="p-4 border border-border">No decision data available</div>;
+  }
+  
   const verdictConfig = getVerdictConfig(decision.verdict);
 
   return (
@@ -85,11 +97,11 @@ export function DecisionCard({ decision }: DecisionCardProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <p className="text-base font-body text-foreground leading-relaxed">
-              {decision.quick_insight.summary}
+              {decision.quick_insight?.summary || 'Analyzing product...'}
             </p>
 
             {/* Uncertainty Warning */}
-            {decision.quick_insight.uncertainty_reason && (
+            {decision.quick_insight?.uncertainty_reason && (
               <div className="mt-3 flex items-start gap-2 p-2 bg-muted/30 rounded border border-border">
                 <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
@@ -145,12 +157,12 @@ export function DecisionCard({ decision }: DecisionCardProps) {
                 Why This Matters
               </h4>
               <ul className="space-y-2">
-                {decision.explanation.why_this_matters.map((point, i) => (
+                {decision.explanation?.why_this_matters?.map((point, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                     <span className="text-primary mt-1">•</span>
                     <span>{point}</span>
                   </li>
-                ))}
+                )) || <li className="text-sm text-muted-foreground">No details available</li>}
               </ul>
             </div>
 
@@ -160,7 +172,7 @@ export function DecisionCard({ decision }: DecisionCardProps) {
                 When It Makes Sense
               </h4>
               <p className="text-sm text-foreground leading-relaxed">
-                {decision.explanation.when_it_makes_sense}
+                {decision.explanation?.when_it_makes_sense || 'Consider your individual needs and preferences.'}
               </p>
             </div>
 
@@ -170,7 +182,7 @@ export function DecisionCard({ decision }: DecisionCardProps) {
                 What To Know
               </h4>
               <p className="text-sm text-foreground leading-relaxed">
-                {decision.explanation.what_to_know}
+                {decision.explanation?.what_to_know || 'This analysis is informational and not medical advice.'}
               </p>
             </div>
 

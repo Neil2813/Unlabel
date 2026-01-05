@@ -32,7 +32,7 @@ class ExplanationAgent:
         system_prompt = """You are a food intelligence assistant.
 
 Generate a ONE-SENTENCE summary that gives instant understanding.
-Be clear, direct, and avoid jargon."""
+Be clear, direct, and avoid jargon. Focus on what matters most to the consumer."""
 
         user_prompt = f"""Create a one-sentence summary for this decision:
 
@@ -40,12 +40,15 @@ Verdict: {decision.verdict}
 Key Signals: {', '.join(decision.key_signals[:3])}
 Processing Level: {structured_analysis.ingredient_summary.processing_level}
 Sugar Dominant: {structured_analysis.food_properties.sugar_dominant}
+Energy Release: {structured_analysis.food_properties.energy_release_pattern}
 
 Return JSON:
 {{
-  "summary": "One clear sentence (max 20 words)",
+  "summary": "One clear sentence (max 15 words) that captures the essence. Example: 'Fortified whole grain cereal with added sugars - good for quick energy but may cause energy dips.'",
   "uncertainty_reason": "null or brief reason if information is incomplete"
-}}"""
+}}
+
+Keep it simple and actionable."""
 
         try:
             import asyncio
@@ -65,8 +68,14 @@ Return JSON:
             return QuickInsight(**data)
         except Exception as e:
             print(f"Quick insight generation error: {e}")
+            # Create a simple fallback based on key signals
+            if decision.key_signals:
+                signal_summary = decision.key_signals[0].lower()
+                return QuickInsight(
+                    summary=f"{signal_summary} - rated '{decision.verdict}'."
+                )
             return QuickInsight(
-                summary=f"This product is rated '{decision.verdict}'."
+                summary=f"Rated '{decision.verdict}' based on ingredient profile."
             )
 
     async def explain(self, decision: Decision) -> ConsumerExplanation:
@@ -87,10 +96,11 @@ Return JSON:
 Your job is to explain a pre-computed decision clearly and calmly.
 
 You MUST:
-- Use simple language
+- Use simple, everyday language
 - Avoid fear-based tone
 - Avoid medical claims
-- Stay under 120 words"""
+- Be concise and actionable
+- Focus on practical implications, not technical details"""
 
         user_prompt = f"""Using the decision below, explain the result to a general consumer.
 
@@ -103,12 +113,21 @@ OUTPUT FORMAT (STRICT JSON):
 
 {{
   "verdict": "{decision.verdict}",
-  "why_this_matters": ["bullet 1", "bullet 2", "bullet 3"],
-  "when_it_makes_sense": "One sentence",
-  "what_to_know": "One sentence"
+  "why_this_matters": [
+    "One short sentence about the most important factor (max 12 words)",
+    "One short sentence about the second factor (max 12 words)",
+    "One short sentence about the third factor (max 12 words)"
+  ],
+  "when_it_makes_sense": "One clear sentence (max 15 words) about when this product fits well",
+  "what_to_know": "One brief sentence (max 15 words) with key takeaway"
 }}
 
-Do not add extra information."""
+EXAMPLES:
+- "why_this_matters": ["Contains whole grains for fiber", "Fortified with vitamins and minerals", "Added sugars may cause energy spikes"]
+- "when_it_makes_sense": "Good for breakfast when you need quick energy and nutrients."
+- "what_to_know": "Pair with protein to balance energy release throughout the morning."
+
+Keep it simple, practical, and avoid technical jargon."""
 
         try:
             import asyncio
