@@ -8,23 +8,41 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+# Suppress warnings about unused modules
+import warnings
+warnings.filterwarnings("ignore")
+
 try:
+    # Import only what we need
     from mangum import Mangum
+    
+    # Import app after path is set
     from app.main import app
     
     # Create Mangum handler for Vercel
     # lifespan="off" disables lifespan events which can cause issues in serverless
     handler = Mangum(app, lifespan="off")
-except Exception as e:
-    # Log the error for debugging
-    error_msg = f"Failed to initialize app: {str(e)}\n{traceback.format_exc()}"
+    
+except ImportError as e:
+    # Log import errors specifically
+    error_msg = f"Import error: {str(e)}\n{traceback.format_exc()}"
     print(error_msg)
     
-    # Create a minimal error handler
     def handler(event, context):
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
-            "body": f'{{"error": "Application initialization failed: {str(e)}"}}'
+            "body": f'{{"error": "Import failed", "details": "{str(e)}"}}'
+        }
+except Exception as e:
+    # Log other errors
+    error_msg = f"Failed to initialize app: {str(e)}\n{traceback.format_exc()}"
+    print(error_msg)
+    
+    def handler(event, context):
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": f'{{"error": "Initialization failed", "details": "{str(e)}"}}'
         }
 

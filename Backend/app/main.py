@@ -1,10 +1,21 @@
 from fastapi import FastAPI
-from app.ai.router import router as ai_router
-from app.food.router import router as food_router
 
 app = FastAPI(
     title="AI-Native Food Intelligence Backend"
 )
+
+# Import routers after app creation to avoid circular imports
+try:
+    from app.ai.router import router as ai_router
+    from app.food.router import router as food_router
+except ImportError as e:
+    import traceback
+    print(f"Failed to import routers: {e}")
+    print(traceback.format_exc())
+    # Create empty routers to prevent crash
+    from fastapi import APIRouter
+    ai_router = APIRouter()
+    food_router = APIRouter()
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,6 +37,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Health check endpoint (no dependencies)
+@app.get("/")
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "message": "API is running"}
 
 app.include_router(ai_router, prefix="/api")
 app.include_router(food_router, prefix="/api")
