@@ -11,8 +11,8 @@ class FoodReasoningEngine:
             return
             
         genai.configure(api_key=GEMINI_API_KEY)
-        # Using gemini-2.0-flash-exp as per available models
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        # Using gemini-2.0-flash-lite-001
+        self.model = genai.GenerativeModel('gemini-2.0-flash-lite-001')
 
     async def _generate_analysis(self, prompt: str, image_data: bytes = None, mime_type: str = None) -> AnalysisResponse:
         """Shared helper to run generation on text or [text, image] inputs."""
