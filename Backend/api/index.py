@@ -7,9 +7,9 @@ _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-from mangum import Mangum
 from app.main import app
 
-# Create Mangum adapter for FastAPI - must be at module level for Vercel detection
-handler = Mangum(app, lifespan="off")
+# Export FastAPI app directly - Vercel should handle ASGI apps natively
+# If this doesn't work, Vercel may require Mangum for ASGI support
+handler = app
 
