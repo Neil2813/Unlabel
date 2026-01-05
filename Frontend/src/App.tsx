@@ -12,7 +12,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import FoodSearch from "./pages/FoodSearch";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +27,6 @@ const App = () => (
             <Route path="/analyze" element={<Copilot />} />
             <Route path="/analyze/:id" element={<Copilot />} />
             <Route path="/history" element={<History />} />
-            <Route path="/food-search" element={<FoodSearch />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />

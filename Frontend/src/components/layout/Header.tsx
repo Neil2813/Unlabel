@@ -34,7 +34,6 @@ export function Header() {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-6 rounded-none">
               <NavLink to="/analyze">Analyze</NavLink>
-              <NavLink to="/food-search">Food Search</NavLink>
 
               {isAuthenticated && (
                 <NavLink to="/history">History</NavLink>
@@ -89,9 +88,6 @@ export function Header() {
           <nav className="container mx-auto px-4 py-4 flex flex-col gap-3 border-t border-border/30 rounded-none">
             <MobileNavLink to="/analyze" onClick={() => setIsMenuOpen(false)}>
               Analyze
-            </MobileNavLink>
-            <MobileNavLink to="/food-search" onClick={() => setIsMenuOpen(false)}>
-              Food Search
             </MobileNavLink>
 
             {isAuthenticated && (
