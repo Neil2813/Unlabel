@@ -7,25 +7,9 @@ _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-try:
-    from mangum import Mangum
-    from app.main import app
-    
-    # Create Mangum adapter for FastAPI
-    adapter = Mangum(app, lifespan="off")
-except Exception as e:
-    import traceback
-    print(f"Error initializing handler: {e}")
-    traceback.print_exc()
-    raise
+from mangum import Mangum
+from app.main import app
 
-# Vercel handler function - must be a callable function
-def handler(event, context):
-    try:
-        return adapter(event, context)
-    except Exception as e:
-        import traceback
-        print(f"Error in handler: {e}")
-        traceback.print_exc()
-        raise
+# Create Mangum adapter for FastAPI - must be at module level for Vercel detection
+handler = Mangum(app, lifespan="off")
 
