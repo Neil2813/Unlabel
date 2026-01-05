@@ -4,13 +4,12 @@ import os
 import traceback
 
 # Add the project root to the Python path
-# In Vercel: __file__ is /var/task/api/index.py
-# We need /var/task in the path (one level up from api/)
-# This allows us to import app.main and config.settings
-current_file = os.path.abspath(__file__)  # /var/task/api/index.py
-api_dir = os.path.dirname(current_file)   # /var/task/api
-project_root = os.path.dirname(api_dir)   # /var/task
+# In Vercel, the working directory is typically the project root
+# But we ensure the parent of api/ is in the path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))  # api/
+project_root = os.path.dirname(current_dir)  # project root
 
+# Add project root to path if not already there
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
