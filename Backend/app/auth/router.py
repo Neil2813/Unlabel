@@ -20,20 +20,33 @@ def get_db():
 
 @router.post("/register", response_model=TokenResponse)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == data.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        # Check if email already exists
+        existing_user = db.query(User).filter(User.email == data.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(
-        id=str(uuid.uuid4()),
-        name=data.name,
-        email=data.email,
-        hashed_password=hash_password(data.password)
-    )
-    db.add(user)
-    db.commit()
+        # Create new user
+        user = User(
+            id=str(uuid.uuid4()),
+            name=data.name,
+            email=data.email,
+            hashed_password=hash_password(data.password)
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    token = create_access_token(user.id)
-    return {"access_token": token}
+        # Generate token
+        token = create_access_token(user.id)
+        return {"access_token": token, "token_type": "bearer"}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Registration error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
@@ -42,4 +55,4 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token(user.id)
-    return {"access_token": token}
+    return {"access_token": token, "token_type": "bearer"}

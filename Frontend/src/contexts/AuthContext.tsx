@@ -54,17 +54,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.post('/auth/register', { email, password, name });
       const { access_token } = response.data;
 
+      if (!access_token) {
+        throw new Error('No access token received');
+      }
+
       localStorage.setItem('token', access_token);
 
-      // Basic state set
-      setUser({
-        id: 'new-id', // We'll update this on next refresh or profile fetch
-        email,
-        name,
-      });
-    } catch (error) {
+      // Decode token to get user ID
+      try {
+        const payload = JSON.parse(atob(access_token.split('.')[1]));
+        setUser({
+          id: payload.sub,
+          email,
+          name,
+        });
+      } catch {
+        // Fallback if token decode fails
+        setUser({
+          id: 'new-id',
+          email,
+          name,
+        });
+      }
+    } catch (error: any) {
       console.error('Registration failed:', error);
-      throw error;
+      // Extract error message from response
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Registration failed. Please try again.';
+      throw new Error(errorMessage);
     }
   }, []);
 
