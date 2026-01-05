@@ -2,21 +2,19 @@
 import sys
 import os
 
-# Add the project root to the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# Add project root to Python path
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
 
-# Import and setup
+# Import dependencies
 from mangum import Mangum
 from app.main import app
 
-# Create Mangum handler - Vercel will call this handler function
-mangum_instance = Mangum(app, lifespan="off")
+# Create Mangum adapter
+_adapter = Mangum(app, lifespan="off")
 
-# Export handler as a simple function wrapper
+# Vercel handler function - must be named 'handler'
 def handler(event, context):
-    """Vercel serverless function handler"""
-    return mangum_instance(event, context)
+    return _adapter(event, context)
 
