@@ -17,6 +17,9 @@ if project_root not in sys.path:
 import warnings
 warnings.filterwarnings("ignore")
 
+# Initialize handler variable
+handler = None
+
 try:
     # Import only what we need
     from mangum import Mangum
@@ -26,7 +29,11 @@ try:
     
     # Create Mangum handler for Vercel
     # lifespan="off" disables lifespan events which can cause issues in serverless
-    handler = Mangum(app, lifespan="off")
+    mangum_handler = Mangum(app, lifespan="off")
+    
+    # Wrap in a simple function to ensure Vercel can detect it properly
+    def handler(event, context):
+        return mangum_handler(event, context)
     
 except ImportError as e:
     # Log import errors specifically
@@ -34,24 +41,31 @@ except ImportError as e:
     print(error_msg)
     
     # Create a minimal error handler that matches Vercel's expected format
-    def error_handler(event, context):
+    def handler(event, context):
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
             "body": f'{{"error": "Import failed", "details": "{str(e)}"}}'
         }
-    handler = error_handler
 except Exception as e:
     # Log other errors
     error_msg = f"Failed to initialize app: {str(e)}\n{traceback.format_exc()}"
     print(error_msg)
     
     # Create a minimal error handler that matches Vercel's expected format
-    def error_handler(event, context):
+    def handler(event, context):
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
             "body": f'{{"error": "Initialization failed", "details": "{str(e)}"}}'
         }
-    handler = error_handler
+
+# Ensure handler is always defined
+if handler is None:
+    def handler(event, context):
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": '{"error": "Handler not initialized"}'
+        }
 
