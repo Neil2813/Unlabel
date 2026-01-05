@@ -20,8 +20,8 @@ google-auth==2.45.0
 google-auth-httplib2==0.3.0
 googleapis-common-protos==1.72.0
 greenlet==3.3.0
-grpcio==1.76.0
-grpcio-status==1.71.2
+grpcio==1.75.1
+grpcio-status==1.75.1
 h11==0.16.0
 httplib2==0.31.0
 idna==3.11
@@ -47,4 +47,4 @@ typing_extensions==4.15.0
 uritemplate==4.2.0
 urllib3==2.6.2
 uvicorn==0.40.0
-google-genai
+google-generativeai
