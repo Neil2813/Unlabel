@@ -1,4 +1,7 @@
 # Vercel serverless function entry point
+# NOTE: This file is only used for Vercel deployment
+# For Render/Railway/Fly.io, they use uvicorn directly (see render.yaml, Procfile, Dockerfile)
+
 import sys
 import os
 
