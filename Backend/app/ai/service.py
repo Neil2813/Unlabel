@@ -1,5 +1,4 @@
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import json
 from config.settings import GEMINI_API_KEY
 from app.ai.schemas import AnalysisResponse, TradeOff
@@ -8,16 +7,16 @@ class FoodReasoningEngine:
     def __init__(self):
         if not GEMINI_API_KEY:
             print("WARNING: GEMINI_API_KEY not set. AI features will fail.")
-            self.client = None
+            self.model = None
             return
             
-        self.client = genai.Client(api_key=GEMINI_API_KEY)
-        # Using gemini-2.5-flash as per available models
-        self.model_id = 'gemini-2.5-flash'
+        genai.configure(api_key=GEMINI_API_KEY)
+        # Using gemini-2.0-flash-exp as per available models
+        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
-    async def _generate_analysis(self, user_content: list) -> AnalysisResponse:
+    async def _generate_analysis(self, prompt: str, image_data: bytes = None, mime_type: str = None) -> AnalysisResponse:
         """Shared helper to run generation on text or [text, image] inputs."""
-        if not self.client:
+        if not self.model:
             raise ValueError("AI Service not configured (Missing API Key)")
 
         system_instruction = """
@@ -50,12 +49,26 @@ class FoodReasoningEngine:
         """
 
         try:
-            response = await self.client.aio.models.generate_content(
-                model=self.model_id,
-                contents=user_content,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    response_mime_type="application/json"
+            import asyncio
+            
+            # Prepare content
+            if image_data:
+                import PIL.Image
+                import io
+                image = PIL.Image.open(io.BytesIO(image_data))
+                contents = [system_instruction, prompt, image]
+            else:
+                contents = [system_instruction, prompt]
+            
+            # Run the synchronous API in an executor
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.model.generate_content(
+                    contents,
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="application/json"
+                    )
                 )
             )
             
@@ -86,12 +99,10 @@ class FoodReasoningEngine:
         Ingredients to analyze:
         "{text}"
         """
-        return await self._generate_analysis([prompt])
+        return await self._generate_analysis(prompt)
 
     async def analyze_image(self, image_data: bytes, mime_type: str) -> AnalysisResponse:
-        image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
         prompt = "Analyze this food label image."
-        # Input to generate_content can be a list of parts/strings
-        return await self._generate_analysis([prompt, image_part])
+        return await self._generate_analysis(prompt, image_data, mime_type)
 
 ai_service = FoodReasoningEngine()

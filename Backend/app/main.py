@@ -12,9 +12,19 @@ app = FastAPI(
 
 from fastapi.middleware.cors import CORSMiddleware
 
+# CORS configuration - allow frontend domain
+import os
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://unlabel-eight.vercel.app")
+ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, allow all. In production, specify ["http://localhost:5173"]
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
