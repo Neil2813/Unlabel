@@ -345,24 +345,44 @@ Format as JSON:
         print("Agent Step 1: Initial Analysis")
         if image_data:
             # Analyze image first
-            await self._report_progress(1, estimated_total, "Analyzing image...")
-            initial_result = await ai_service.analyze_image(image_data, "image/jpeg")
+            try:
+                await self._report_progress(1, estimated_total, "Analyzing image...")
+                print(f"   → Calling ai_service.analyze_image with {len(image_data)} bytes")
+                initial_result = await ai_service.analyze_image(image_data, "image/jpeg")
+                print(f"   → ai_service.analyze_image completed successfully")
+            except Exception as e:
+                print(f"❌ ERROR in ai_service.analyze_image: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                raise Exception(f"Image analysis failed: {type(e).__name__}: {str(e)}")
             
             # Also extract text from image for follow-up steps
-            await self._report_progress(1, estimated_total, "Extracting text from image...")
-            import PIL.Image
-            import io
-            image = PIL.Image.open(io.BytesIO(image_data))
-            
-            extraction_prompt = """Extract all text from this food label image.
+            try:
+                await self._report_progress(1, estimated_total, "Extracting text from image...")
+                print(f"   → Extracting text from image")
+                import PIL.Image
+                import io
+                image = PIL.Image.open(io.BytesIO(image_data))
+                print(f"   → PIL Image opened successfully: {image.format}, {image.size}")
+                
+                extraction_prompt = """Extract all text from this food label image.
 Return the complete ingredient list and nutrition information."""
-            
-            loop = asyncio.get_event_loop()
-            extraction_response = await loop.run_in_executor(
-                None,
-                lambda: self.model.generate_content([extraction_prompt, image])
-            )
-            extracted_text = extraction_response.text.strip()
+                
+                loop = asyncio.get_event_loop()
+                print(f"   → Calling Gemini for text extraction")
+                extraction_response = await loop.run_in_executor(
+                    None,
+                    lambda: self.model.generate_content([extraction_prompt, image])
+                )
+                extracted_text = extraction_response.text.strip()
+                print(f"   → Text extraction completed, length: {len(extracted_text)}")
+            except Exception as e:
+                print(f"❌ ERROR in text extraction: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                # Continue with empty extracted text rather than failing
+                extracted_text = ""
+                print(f"   ⚠️  Continuing without extracted text")
             
             # Create key takeaways from trade-offs
             key_takeaways = []

@@ -37,20 +37,65 @@ async def autonomous_analyze_image(
     The agent acts autonomously, making intelligent decisions about what
     information would be most valuable to the user.
     """
+    import traceback
+    import sys
+    
+    print(f"📸 Autonomous image analysis request received")
+    print(f"   File: {file.filename}, Content-Type: {file.content_type}")
+    print(f"   User query: {user_query}")
+    
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     try:
         contents = await file.read()
+        print(f"   Image size: {len(contents)} bytes")
+        
+        # Check if autonomous_agent is properly initialized
+        if not hasattr(autonomous_agent, 'model') or autonomous_agent.model is None:
+            error_msg = "Autonomous agent not initialized. Check API key configuration."
+            print(f"❌ ERROR: {error_msg}")
+            print(f"   - Has model attr: {hasattr(autonomous_agent, 'model')}")
+            if hasattr(autonomous_agent, 'model'):
+                print(f"   - Model is None: {autonomous_agent.model is None}")
+            raise HTTPException(status_code=500, detail=error_msg)
+        
+        print(f"✅ Autonomous agent model is initialized")
         result = await autonomous_agent.analyze_autonomously(
             image_data=contents,
             user_query=user_query
         )
+        print(f"✅ Analysis complete, returning result")
         return result
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Autonomous agent error: {str(e)}")
+        # Log full error details
+        error_details = {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc()
+        }
+        
+        print(f"\n{'='*60}")
+        print(f"❌ AUTONOMOUS AGENT ERROR")
+        print(f"{'='*60}")
+        print(f"Error Type: {error_details['error_type']}")
+        print(f"Error Message: {error_details['error_message']}")
+        print(f"\nFull Traceback:")
+        print(error_details['traceback'])
+        print(f"{'='*60}\n")
+        
+        # Return more detailed error in development
+        from config.settings import ENV
+        if ENV == "development":
+            raise HTTPException(
+                status_code=500, 
+                detail=f"{error_details['error_type']}: {error_details['error_message']}\n\nTraceback:\n{error_details['traceback']}"
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Autonomous agent error: {str(e)}")
 
 
 @router.post("/autonomous/text")
