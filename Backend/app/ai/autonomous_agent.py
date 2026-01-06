@@ -54,7 +54,7 @@ class AutonomousAgent:
             return
         
         self.use_key_manager = True
-        self.max_steps = 5  # Allow full autonomous workflow
+        self.max_steps = 8  # Allow comprehensive autonomous workflow
         self.progress_callback = None  # Callback for progress updates
         
         # Initialize the Gemini model

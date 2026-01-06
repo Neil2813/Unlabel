@@ -91,29 +91,29 @@ const AutonomousAgentCard: React.FC<AutonomousAgentCardProps> = ({ response }) =
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-display text-lg font-bold text-primary mb-1">
-              🤖 Autonomous Analysis Complete
+            <h3 className="font-display text-xl font-bold text-primary mb-1">
+              Autonomous Analysis Complete
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {response.total_steps} steps executed autonomously
             </p>
           </div>
-          <div className={cn("text-xs font-bold uppercase", getConfidenceColor(response.synthesis.confidence_level))}>
+          <div className={cn("text-sm font-bold uppercase", getConfidenceColor(response.synthesis.confidence_level))}>
             {response.synthesis.confidence_level} confidence
           </div>
         </div>
 
-        <p className="font-body text-sm leading-relaxed text-foreground mb-4">
+        <p className="font-body text-base leading-relaxed text-foreground mb-4">
           {response.synthesis.executive_summary}
         </p>
 
         {/* Key Takeaways */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold uppercase text-muted-foreground">Key Takeaways</h4>
+          <h4 className="text-sm font-bold uppercase text-muted-foreground">Key Takeaways</h4>
           <div className="space-y-2">
             {response.synthesis.key_takeaways.map((takeaway, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm">
-                <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div key={i} className="flex items-start gap-2 text-base">
+                <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                 <span className="text-foreground">{takeaway}</span>
               </div>
             ))}
@@ -123,10 +123,10 @@ const AutonomousAgentCard: React.FC<AutonomousAgentCardProps> = ({ response }) =
         {/* Next Steps */}
         {response.synthesis.next_steps && response.synthesis.next_steps.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border/50">
-            <h4 className="text-xs font-bold uppercase text-muted-foreground mb-2">Recommended Actions</h4>
+            <h4 className="text-sm font-bold uppercase text-muted-foreground mb-2">Recommended Actions</h4>
             <div className="space-y-1">
               {response.synthesis.next_steps.map((step, i) => (
-                <div key={i} className="text-sm text-muted-foreground">
+                <div key={i} className="text-base text-muted-foreground">
                   {i + 1}. {step}
                 </div>
               ))}
@@ -141,10 +141,10 @@ const AutonomousAgentCard: React.FC<AutonomousAgentCardProps> = ({ response }) =
           <Sparkles className="w-4 h-4 text-primary" />
           Initial Analysis
         </h4>
-        <p className="text-sm font-semibold text-foreground mb-2">
+        <p className="text-base font-semibold text-foreground mb-2">
           {response.initial_analysis.insight}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {response.initial_analysis.detailed_reasoning}
         </p>
 

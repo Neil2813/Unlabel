@@ -127,7 +127,7 @@ When you upload an image of "Honey Nut Oatmeal Cookies":
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ 🤖 Autonomous Analysis Complete                     │
+│ Autonomous Analysis Complete                        │
 │ 3 steps executed autonomously                       │
 │                                          HIGH CONFIDENCE
 │                                                      │
