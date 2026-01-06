@@ -182,6 +182,7 @@ const Copilot = () => {
     });
 
     setIsTyping(true);
+    setLoadingProgress({ step: 1, total: 3, message: 'Starting analysis...', status: 'in_progress' });
 
     try {
       // Build conversation context from previous messages (last 3 messages for context)
@@ -191,6 +192,8 @@ const Copilot = () => {
         .map(msg => {
           if (msg.role === 'user') {
             return `User: ${msg.content || 'Analyzed an image'}`;
+          } else if (msg.autonomousResponse) {
+            return `AI: ${msg.autonomousResponse.synthesis.executive_summary || 'Product analysis'}`;
           } else if (msg.decision) {
             return `AI: Analyzed product - ${msg.decision.quick_insight?.summary || 'Product analysis'}`;
           } else {
@@ -199,104 +202,158 @@ const Copilot = () => {
         })
         .join('\n');
 
-      // Use new decision engine endpoint - DO NOT fall back to old endpoint
-      const request: DecisionRequest = {
-        text,
-        conversation_context: recentMessages || null
+      // Use STREAMING endpoint for real-time progressive results
+      const endpoint = '/analyze/autonomous/text/stream';
+      const contextParam = recentMessages ? `?user_query=${encodeURIComponent(recentMessages)}` : '';
+      const textParam = `${contextParam ? '&' : '?'}text=${encodeURIComponent(text)}`;
+
+      const url = `${api.defaults.baseURL}${endpoint}${contextParam}${textParam}`;
+
+      console.log('Calling STREAMING AUTONOMOUS AGENT endpoint:', endpoint);
+      console.log('Stream URL:', url);
+
+      // Temporary storage for progressive results
+      let partialResult: Partial<AutonomousAgentResponse> = {
+        initial_analysis: undefined,
+        workflow_steps: [],
+        synthesis: undefined,
+        total_steps: 0
       };
-      console.log('Calling /analyze/decision with:', request);
 
-      const response = await api.post<DecisionEngineResponse>('/analyze/decision', request);
+      // Create EventSource for streaming
+      const eventSource = new EventSource(url);
 
-      // Ensure response data matches expected structure
-      const decisionData: DecisionEngineResponse = response.data;
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-      // Log for debugging
-      console.log('Decision engine response:', decisionData);
-      console.log('Response keys:', Object.keys(decisionData));
+          console.log('Stream event received:', data.event, data);
 
-      // Validate that we have the required fields
-      if (!decisionData) {
-        console.error('No response data received');
-        throw new Error('No response from decision engine');
-      }
+          switch (data.event) {
+            case 'step_start':
+              setLoadingProgress({
+                step: data.step,
+                total: 3,
+                message: data.message,
+                status: 'in_progress'
+              });
+              console.log(`Starting step ${data.step}: ${data.name}`);
+              break;
 
-      // Check if we got the old format by mistake (has trade_offs instead of explanation)
-      if ('trade_offs' in decisionData || 'insight' in decisionData) {
-        console.error('Received old format response! Expected DecisionEngineResponse but got AnalysisResponse');
-        throw new Error('Backend returned old format. Please check backend endpoint.');
-      }
+            case 'step_complete':
+              console.log(`Completed step: ${data.name}`, data.result);
 
-      // Ensure required fields exist (with fallbacks)
-      if (!decisionData.quick_insight) {
-        decisionData.quick_insight = { summary: 'Analysis complete.', uncertainty_reason: null };
-      }
-      if (!decisionData.quick_insight.summary) {
-        decisionData.quick_insight.summary = 'Analysis complete.';
-      }
+              // Store the completed step
+              if (data.name === 'initial_analysis') {
+                partialResult.initial_analysis = data.result;
+              } else if (data.name === 'decision_engine') {
+                partialResult.workflow_steps!.push({
+                  action: 'decision_engine',
+                  description: 'Deep analysis with multi-agent decision engine',
+                  result: data.result,
+                  reasoning: 'Complete ingredient interpretation and intent classification'
+                });
+              } else if (data.name === 'synthesis') {
+                partialResult.synthesis = data.result;
+              }
+              break;
 
-      if (!decisionData.explanation) {
-        decisionData.explanation = {
-          why_this_matters: ['Product analyzed based on ingredient profile'],
-          when_it_makes_sense: 'Consider your individual dietary needs.',
-          what_to_know: 'This analysis is informational.'
-        };
-      }
+            case 'complete':
+              // Final result received
+              eventSource.close();
 
-      // Ensure explanation fields exist
-      if (!decisionData.explanation.why_this_matters) {
-        decisionData.explanation.why_this_matters = [];
-      }
-      if (!decisionData.explanation.when_it_makes_sense) {
-        decisionData.explanation.when_it_makes_sense = 'Consider your individual dietary needs.';
-      }
-      if (!decisionData.explanation.what_to_know) {
-        decisionData.explanation.what_to_know = 'This analysis is informational.';
-      }
+              console.log('Stream complete! Final result:', data.result);
 
-      // Ensure we have key_signals
-      if (!decisionData.key_signals) {
-        decisionData.key_signals = [];
-      }
+              const autonomousData: AutonomousAgentResponse = data.result;
 
-      // Ensure we have ingredient_translations
-      if (!decisionData.ingredient_translations) {
-        decisionData.ingredient_translations = [];
-      }
 
-      // Ensure we have uncertainty_flags
-      if (!decisionData.uncertainty_flags) {
-        decisionData.uncertainty_flags = [];
-      }
+              // Ensure required fields exist (with fallbacks)
+              if (!autonomousData.initial_analysis) {
+                autonomousData.initial_analysis = {
+                  insight: 'Analysis complete.',
+                  detailed_reasoning: 'Product analyzed.',
+                  trade_offs: { pros: [], cons: [] }
+                };
+              }
 
-      // Ensure intent_classified exists
-      if (!decisionData.intent_classified) {
-        decisionData.intent_classified = 'curiosity';
-      }
+              if (!autonomousData.workflow_steps) {
+                autonomousData.workflow_steps = [];
+              }
 
-      // structured_analysis is optional, so we don't need to set a default
+              if (!autonomousData.synthesis) {
+                autonomousData.synthesis = {
+                  executive_summary: 'Analysis completed.',
+                  key_takeaways: [],
+                  confidence_level: 'medium',
+                  next_steps: []
+                };
+              }
 
-      addMessage({
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        type: 'decision',
-        decision: decisionData,
-        timestamp: new Date(),
-      });
+              addMessage({
+                id: (Date.now() + 1).toString(),
+                role: 'ai',
+                type: 'autonomous',
+                autonomousResponse: autonomousData,
+                timestamp: new Date(),
+              });
+
+              setIsTyping(false);
+              setLoadingProgress(null);
+              break;
+
+            case 'error':
+              eventSource.close();
+              console.error('Stream error event:', data.error);
+
+              addMessage({
+                id: (Date.now() + 1).toString(),
+                role: 'ai',
+                type: 'text',
+                content: `Analysis error: ${data.error.error || 'Unknown error'}`,
+                timestamp: new Date(),
+              });
+
+              setIsTyping(false);
+              setLoadingProgress(null);
+              break;
+
+            default:
+              console.log('Unknown event type:', data.event);
+          }
+        } catch (parseError) {
+          console.error('Error parsing stream event:', parseError);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('EventSource connection error:', error);
+        eventSource.close();
+
+        addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          type: 'text',
+          content: 'Connection error. Please try again.',
+          timestamp: new Date(),
+        });
+
+        setIsTyping(false);
+        setLoadingProgress(null);
+      };
+
     } catch (error: any) {
-      console.error('Decision engine error:', error);
-      console.error('Error details:', error.response?.data || error.message);
+      console.error('Streaming setup error:', error);
 
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
         type: 'text',
-        content:
-          `I'm having trouble connecting to my reasoning engine right now. Error: ${error.message || 'Unknown error'}. Please check the console for details.`,
+        content: `I'm having trouble analyzing that right now. Error: ${error.message || 'Unknown error'}`,
         timestamp: new Date(),
       });
-    } finally {
+
       setIsTyping(false);
+      setLoadingProgress(null);
     }
   };
 
@@ -339,9 +396,9 @@ const Copilot = () => {
       const endpoint = '/analyze/autonomous/image';
       const fullUrl = `${api.defaults.baseURL}${endpoint}`;
 
-      console.log('🤖 Calling AUTONOMOUS AGENT endpoint:', endpoint);
-      console.log('📤 Full URL:', fullUrl);
-      console.log('⚠️ If you see /api/analyze/image in logs, browser cache needs clearing!');
+      console.log('Calling AUTONOMOUS AGENT endpoint:', endpoint);
+      console.log('Full URL:', fullUrl);
+      console.log('If you see /api/analyze/image in logs, browser cache needs clearing!');
 
       // Explicitly prevent calling old endpoint
       if (endpoint.includes('/analyze/image') && !endpoint.includes('/autonomous') && !endpoint.includes('/decision')) {
@@ -359,8 +416,8 @@ const Copilot = () => {
 
       setLoadingProgress({ step: 3, total: 3, message: 'Processing results...', status: 'in_progress' });
 
-      console.log('✅ Response received from:', response.config.url);
-      console.log('🤖 Autonomous agent response:', response.data);
+      console.log('Response received from:', response.config.url);
+      console.log('Autonomous agent response:', response.data);
 
       // Ensure response data matches expected structure
       const autonomousData: AutonomousAgentResponse = response.data;
@@ -493,7 +550,7 @@ const Copilot = () => {
                   <AutonomousAgentCard response={msg.autonomousResponse} />
                 ) : msg.type === 'autonomous' && (
                   <div className="p-4 border border-border bg-muted/30 text-sm text-muted-foreground">
-                    🤖 Autonomous analysis in progress...
+                    Autonomous analysis in progress...
                   </div>
                 )}
 

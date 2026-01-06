@@ -54,15 +54,15 @@ class AutonomousAgent:
             return
         
         self.use_key_manager = True
-        self.max_steps = 5  # Prevent infinite loops
+        self.max_steps = 5  # Allow full autonomous workflow
         self.progress_callback = None  # Callback for progress updates
         
         # Initialize the Gemini model
         try:
             self.model = key_manager.create_model('gemini-2.5-flash')
-            print("✅ Autonomous agent model initialized successfully")
+            print("Autonomous agent model initialized successfully")
         except Exception as e:
-            print(f"❌ Failed to initialize autonomous agent model: {e}")
+            print(f"Failed to initialize autonomous agent model: {e}")
             self.model = None
     
     def set_progress_callback(self, callback):
@@ -166,15 +166,18 @@ Return ONLY the action name (e.g., "decision_engine", "complete")
                 request = DecisionRequest(text=extracted_text)
                 result = await coordinator.process(request)
                 
+                # Include FULL decision engine response (all agent outputs)
                 return AgentStep(
                     action=action,
                     description="Deep analysis with multi-agent decision engine",
                     result={
                         "quick_insight": result.quick_insight.dict(),
                         "explanation": result.explanation.dict(),
+                        "intent_classified": result.intent_classified,
                         "key_signals": result.key_signals,
                         "ingredient_translations": [t.dict() for t in result.ingredient_translations],
-                        "uncertainty_flags": result.uncertainty_flags
+                        "uncertainty_flags": result.uncertainty_flags,
+                        "structured_analysis": result.structured_analysis.dict() if result.structured_analysis else None
                     },
                     reasoning="Decision engine provides structured analysis with intent classification and ingredient interpretation"
                 )
@@ -339,7 +342,7 @@ Format as JSON:
         
         # STEP 1: Initial Analysis (Image or Text)
         await self._report_progress(1, estimated_total, "Starting initial analysis...")
-        print("🤖 Agent Step 1: Initial Analysis")
+        print("Agent Step 1: Initial Analysis")
         if image_data:
             # Analyze image first
             await self._report_progress(1, estimated_total, "Analyzing image...")
@@ -422,7 +425,7 @@ Return the complete ingredient list and nutrition information."""
         step_count = 1
         while step_count < self.max_steps:
             await self._report_progress(step_count + 1, estimated_total, f"Deciding next action (step {step_count + 1})...")
-            print(f"🤖 Agent Step {step_count + 1}: Deciding next action...")
+            print(f"Agent Step {step_count + 1}: Deciding next action...")
             
             # Decide next action
             next_action = await self._decide_next_action(
@@ -446,7 +449,7 @@ Return the complete ingredient list and nutrition information."""
         
         # FINAL STEP: Synthesize everything
         await self._report_progress(step_count + 1, step_count + 1, "Synthesizing final response...")
-        print("🤖 Final Step: Synthesizing comprehensive response")
+        print("Final Step: Synthesizing comprehensive response")
         synthesis = await self._synthesize_final_response(initial_analysis, workflow_steps)
         
         await self._report_progress(step_count + 1, step_count + 1, "Analysis complete!", "completed")
