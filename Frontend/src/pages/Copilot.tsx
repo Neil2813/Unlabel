@@ -265,9 +265,27 @@ const Copilot = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await api.post<DecisionEngineResponse>('/analyze/decision/image', formData, {
+      // CRITICAL: Use decision engine endpoint, NOT legacy /analyze/image
+      const endpoint = '/analyze/decision/image';
+      const fullUrl = `${api.defaults.baseURL}${endpoint}`;
+      
+      console.log('🚀 Calling DECISION ENGINE endpoint:', endpoint);
+      console.log('📤 Full URL:', fullUrl);
+      console.log('⚠️ If you see /api/analyze/image in logs, browser cache needs clearing!');
+      
+      // Explicitly prevent calling old endpoint
+      if (endpoint.includes('/analyze/image') && !endpoint.includes('/decision')) {
+        throw new Error('ERROR: Attempted to call legacy endpoint! This should never happen.');
+      }
+      
+      const response = await api.post<DecisionEngineResponse>(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
+      console.log('✅ Response received from:', response.config.url);
+      if (!response.config.url?.includes('/decision')) {
+        console.error('❌ ERROR: Response came from wrong endpoint! Expected /decision/image but got:', response.config.url);
+      }
 
       // Ensure response data matches expected structure
       const decisionData: DecisionEngineResponse = response.data;
