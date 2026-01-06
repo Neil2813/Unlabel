@@ -1,18 +1,117 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, UploadFile, Query
 from app.ai.schemas import (
     IngredientAnalysisRequest, 
     AnalysisResponse,
     DecisionRequest,
     DecisionEngineResponse
 )
+from app.ai.comparison_schemas import ComparisonRequest, ComparisonResponse
 from app.ai.service import ai_service
 from app.ai.coordinator import coordinator
+from app.ai.autonomous_agent import autonomous_agent
+from app.ai.comparison_service import comparison_service
 
 router = APIRouter(prefix="/analyze", tags=["AI Analysis"])
 
+# ============================================================================
+# AUTONOMOUS AGENT ENDPOINTS (Multi-step orchestration)
+# ============================================================================
+
+@router.post("/autonomous/image")
+async def autonomous_analyze_image(
+    file: UploadFile = File(...),
+    user_query: str = Query(None, description="Optional user query for context")
+):
+    """
+    🤖 AUTONOMOUS AI AGENT - Image Analysis
+    
+    This endpoint orchestrates a multi-step autonomous workflow:
+    1. Analyzes image to extract summary and key takeaways
+    2. Autonomously decides next steps based on initial analysis
+    3. Executes follow-up actions (decision engine, product search, etc.)
+    4. Synthesizes all information into comprehensive response
+    
+    The agent acts autonomously, making intelligent decisions about what
+    information would be most valuable to the user.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    try:
+        contents = await file.read()
+        result = await autonomous_agent.analyze_autonomously(
+            image_data=contents,
+            user_query=user_query
+        )
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Autonomous agent error: {str(e)}")
+
+
+@router.post("/autonomous/text")
+async def autonomous_analyze_text(
+    text: str = Query(..., description="Ingredient text or product information"),
+    user_query: str = Query(None, description="Optional user query for context")
+):
+    """
+    🤖 AUTONOMOUS AI AGENT - Text Analysis
+    
+    This endpoint orchestrates a multi-step autonomous workflow:
+    1. Analyzes text to extract summary and key takeaways
+    2. Autonomously decides next steps based on initial analysis
+    3. Executes follow-up actions (decision engine, product search, etc.)
+    4. Synthesizes all information into comprehensive response
+    """
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    
+    try:
+        result = await autonomous_agent.analyze_autonomously(
+            text_data=text,
+            user_query=user_query
+        )
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Autonomous agent error: {str(e)}")
+
+# ============================================================================
+# COMPARISON ENDPOINT (Compare two products side-by-side)
+# ============================================================================
+
+@router.post("/compare", response_model=ComparisonResponse)
+async def compare_products(request: ComparisonRequest):
+    """
+    🔬 PRODUCT COMPARISON
+    
+    Compare two products side-by-side:
+    - Analyzes both products in parallel using decision engine
+    - Highlights key differences
+    - Provides clear recommendation
+    - Returns full analysis for each product
+    """
+    if not request.product_a_text.strip() or not request.product_b_text.strip():
+        raise HTTPException(status_code=400, detail="Both product texts must be provided")
+    
+    try:
+        result = await comparison_service.compare_products(request)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Comparison error: {str(e)}")
+
+# ============================================================================
 # Decision engine endpoints (more specific routes first)
+# ============================================================================
 @router.post("/decision/image", response_model=DecisionEngineResponse)
-async def analyze_decision_image(file: UploadFile = File(...)):
+async def analyze_decision_image(
+    file: UploadFile = File(...),
+    conversation_context: str = Query(None, description="Previous conversation context for follow-up queries")
+):
     """
     Decision engine endpoint for image input.
     Extracts ingredient/nutrition info from image, then processes through decision engine.
@@ -63,10 +162,10 @@ If any information is unclear or missing, note that in your response."""
         extracted_text = response.text.strip()
         
         # Create DecisionRequest with extracted text
-        decision_request = DecisionRequest(text=extracted_text)
+        decision_request = DecisionRequest(text=extracted_text, conversation_context=conversation_context)
         
         # Process through decision engine
-        result = await coordinator.process(decision_request)
+        result = await coordinator.process(decision_request, conversation_context=conversation_context)
         return result
         
     except Exception as e:
@@ -88,34 +187,12 @@ async def analyze_decision(request: DecisionRequest):
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
     try:
-        result = await coordinator.process(request)
+        result = await coordinator.process(request, conversation_context=request.conversation_context)
         return result
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Decision engine error: {str(e)}")
 
-# Legacy endpoints (for backward compatibility)
-@router.post("/text", response_model=AnalysisResponse)
-async def analyze_ingredients_text(request: IngredientAnalysisRequest):
-    """Legacy endpoint for backward compatibility"""
-    if not request.text.strip():
-        raise HTTPException(status_code=400, detail="Text cannot be empty")
-        
-    result = await ai_service.analyze_text(request.text)
-    return result
-
-@router.post("/image", response_model=AnalysisResponse)
-async def analyze_ingredients_image(file: UploadFile = File(...)):
-    """Legacy endpoint for backward compatibility"""
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-        
-    try:
-        contents = await file.read()
-        result = await ai_service.analyze_image(contents, file.content_type)
-        return result
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+# Legacy endpoints have been removed.
+# Use /autonomous/text, /autonomous/image, or /decision instead.

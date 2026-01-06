@@ -4,6 +4,7 @@ import { AIInput } from '@/components/ui/AIInput';
 import { FoodScanner } from '@/components/ui/FoodScanner';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { DecisionCard } from '@/components/ui/DecisionCard';
+import AutonomousAgentCard from '@/components/ui/AutonomousAgentCard';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -33,7 +34,6 @@ interface QuickInsight {
 }
 
 interface ConsumerExplanation {
-  verdict: string;
   why_this_matters: string[]; // Max 3 bullet points
   when_it_makes_sense: string;
   what_to_know: string;
@@ -75,38 +75,73 @@ interface DecisionRequest {
   text: string;
   user_intent?: "quick_yes_no" | "comparison" | "risk_check" | "curiosity" | null;
   include_nutrition?: string | null;
+  conversation_context?: string | null;
 }
 
 interface DecisionEngineResponse {
   // Instant understanding (show first)
   quick_insight: QuickInsight;
-  
+
   // Consumer-facing (primary)
-  verdict: "Daily" | "Occasional" | "Limit Frequent Use" | string; // Allow string for flexibility
   explanation: ConsumerExplanation;
-  
+
   // Supporting information
   intent_classified: "quick_yes_no" | "comparison" | "risk_check" | "curiosity" | string;
   key_signals: string[]; // Top signals that influenced the decision
-  
+
   // Ingredient translation (explain complex terms)
   ingredient_translations: IngredientTranslation[];
-  
+
   // Uncertainty flags
   uncertainty_flags: string[];
-  
+
   // Technical details (optional, for transparency/debugging)
   structured_analysis?: StructuredIngredientAnalysis | null;
+}
+
+// Autonomous Agent Types
+interface AgentStep {
+  action: string;
+  description: string;
+  result: any;
+  reasoning: string;
+}
+
+interface Synthesis {
+  executive_summary: string;
+  key_takeaways: string[];
+  confidence_level: 'high' | 'medium' | 'low';
+  next_steps: string[];
+}
+
+interface InitialAnalysis {
+  insight: string;
+  detailed_reasoning: string;
+  trade_offs: {
+    pros: string[];
+    cons: string[];
+  };
+  key_takeaways?: string[];  // New field from backend
+  uncertainty_note?: string;
+  extracted_text?: string;
+}
+
+interface AutonomousAgentResponse {
+  initial_analysis: InitialAnalysis;
+  workflow_steps: AgentStep[];
+  synthesis: Synthesis;
+  total_steps: number;
 }
 
 interface Message {
   id: string;
   role: 'user' | 'ai';
-  type: 'text' | 'image' | 'analysis' | 'decision';
+  type: 'text' | 'image' | 'analysis' | 'decision' | 'autonomous';
   content?: string;
   imagePreview?: string;
   analysis?: AnalysisResult; // Legacy format
   decision?: DecisionEngineResponse; // New decision engine format
+  autonomousResponse?: AutonomousAgentResponse; // Autonomous agent format
   timestamp: Date;
 }
 
@@ -124,6 +159,12 @@ const Copilot = () => {
   ]);
 
   const [isTyping, setIsTyping] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState<{
+    step: number;
+    total: number;
+    message: string;
+    status: string;
+  } | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -143,31 +184,49 @@ const Copilot = () => {
     setIsTyping(true);
 
     try {
+      // Build conversation context from previous messages (last 3 messages for context)
+      const recentMessages = messages
+        .filter(msg => msg.role === 'user' || msg.role === 'ai')
+        .slice(-3)
+        .map(msg => {
+          if (msg.role === 'user') {
+            return `User: ${msg.content || 'Analyzed an image'}`;
+          } else if (msg.decision) {
+            return `AI: Analyzed product - ${msg.decision.quick_insight?.summary || 'Product analysis'}`;
+          } else {
+            return `AI: ${msg.content || ''}`;
+          }
+        })
+        .join('\n');
+
       // Use new decision engine endpoint - DO NOT fall back to old endpoint
-      const request: DecisionRequest = { text };
+      const request: DecisionRequest = {
+        text,
+        conversation_context: recentMessages || null
+      };
       console.log('Calling /analyze/decision with:', request);
-      
+
       const response = await api.post<DecisionEngineResponse>('/analyze/decision', request);
-      
+
       // Ensure response data matches expected structure
       const decisionData: DecisionEngineResponse = response.data;
-      
+
       // Log for debugging
       console.log('Decision engine response:', decisionData);
       console.log('Response keys:', Object.keys(decisionData));
-      
+
       // Validate that we have the required fields
       if (!decisionData) {
         console.error('No response data received');
         throw new Error('No response from decision engine');
       }
-      
+
       // Check if we got the old format by mistake (has trade_offs instead of explanation)
       if ('trade_offs' in decisionData || 'insight' in decisionData) {
         console.error('Received old format response! Expected DecisionEngineResponse but got AnalysisResponse');
         throw new Error('Backend returned old format. Please check backend endpoint.');
       }
-      
+
       // Ensure required fields exist (with fallbacks)
       if (!decisionData.quick_insight) {
         decisionData.quick_insight = { summary: 'Analysis complete.', uncertainty_reason: null };
@@ -175,20 +234,15 @@ const Copilot = () => {
       if (!decisionData.quick_insight.summary) {
         decisionData.quick_insight.summary = 'Analysis complete.';
       }
-      
-      if (!decisionData.verdict) {
-        decisionData.verdict = 'Occasional';
-      }
-      
+
       if (!decisionData.explanation) {
         decisionData.explanation = {
-          verdict: decisionData.verdict,
           why_this_matters: ['Product analyzed based on ingredient profile'],
           when_it_makes_sense: 'Consider your individual dietary needs.',
           what_to_know: 'This analysis is informational.'
         };
       }
-      
+
       // Ensure explanation fields exist
       if (!decisionData.explanation.why_this_matters) {
         decisionData.explanation.why_this_matters = [];
@@ -199,29 +253,29 @@ const Copilot = () => {
       if (!decisionData.explanation.what_to_know) {
         decisionData.explanation.what_to_know = 'This analysis is informational.';
       }
-      
+
       // Ensure we have key_signals
       if (!decisionData.key_signals) {
         decisionData.key_signals = [];
       }
-      
+
       // Ensure we have ingredient_translations
       if (!decisionData.ingredient_translations) {
         decisionData.ingredient_translations = [];
       }
-      
+
       // Ensure we have uncertainty_flags
       if (!decisionData.uncertainty_flags) {
         decisionData.uncertainty_flags = [];
       }
-      
+
       // Ensure intent_classified exists
       if (!decisionData.intent_classified) {
         decisionData.intent_classified = 'curiosity';
       }
-      
+
       // structured_analysis is optional, so we don't need to set a default
-      
+
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -232,7 +286,7 @@ const Copilot = () => {
     } catch (error: any) {
       console.error('Decision engine error:', error);
       console.error('Error details:', error.response?.data || error.message);
-      
+
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -259,6 +313,7 @@ const Copilot = () => {
     });
 
     setIsTyping(true);
+    setLoadingProgress({ step: 1, total: 3, message: 'Starting analysis...', status: 'in_progress' });
 
     try {
       // Use new decision engine endpoint for images
@@ -266,109 +321,92 @@ const Copilot = () => {
       formData.append('file', file);
 
       // CRITICAL: Use decision engine endpoint, NOT legacy /analyze/image
-      const endpoint = '/analyze/decision/image';
+      // Build conversation context from previous messages (last 3 messages for context)
+      const recentMessages = messages
+        .filter(msg => msg.role === 'user' || msg.role === 'ai')
+        .slice(-3)
+        .map(msg => {
+          if (msg.role === 'user') {
+            return `User: ${msg.content || 'Analyzed an image'}`;
+          } else if (msg.decision) {
+            return `AI: Analyzed product - ${msg.decision.quick_insight?.summary || 'Product analysis'}`;
+          } else {
+            return `AI: ${msg.content || ''}`;
+          }
+        })
+        .join('\n');
+
+      const endpoint = '/analyze/autonomous/image';
       const fullUrl = `${api.defaults.baseURL}${endpoint}`;
-      
-      console.log('🚀 Calling DECISION ENGINE endpoint:', endpoint);
+
+      console.log('🤖 Calling AUTONOMOUS AGENT endpoint:', endpoint);
       console.log('📤 Full URL:', fullUrl);
       console.log('⚠️ If you see /api/analyze/image in logs, browser cache needs clearing!');
-      
+
       // Explicitly prevent calling old endpoint
-      if (endpoint.includes('/analyze/image') && !endpoint.includes('/decision')) {
+      if (endpoint.includes('/analyze/image') && !endpoint.includes('/autonomous') && !endpoint.includes('/decision')) {
         throw new Error('ERROR: Attempted to call legacy endpoint! This should never happen.');
       }
-      
-      const response = await api.post<DecisionEngineResponse>(endpoint, formData, {
+
+      // Add conversation context as query parameter for image uploads
+      const contextParam = recentMessages ? `?user_query=${encodeURIComponent(recentMessages)}` : '';
+
+      setLoadingProgress({ step: 2, total: 3, message: 'Uploading image...', status: 'in_progress' });
+
+      const response = await api.post<AutonomousAgentResponse>(endpoint + contextParam, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
+      setLoadingProgress({ step: 3, total: 3, message: 'Processing results...', status: 'in_progress' });
+
       console.log('✅ Response received from:', response.config.url);
-      if (!response.config.url?.includes('/decision')) {
-        console.error('❌ ERROR: Response came from wrong endpoint! Expected /decision/image but got:', response.config.url);
-      }
+      console.log('🤖 Autonomous agent response:', response.data);
 
       // Ensure response data matches expected structure
-      const decisionData: DecisionEngineResponse = response.data;
-      
+      const autonomousData: AutonomousAgentResponse = response.data;
+
       // Log for debugging
-      console.log('Decision engine image response:', decisionData);
-      console.log('Response keys:', Object.keys(decisionData));
-      
+      console.log('Autonomous agent response keys:', Object.keys(autonomousData));
+
       // Validate that we have the required fields
-      if (!decisionData) {
+      if (!autonomousData) {
         console.error('No response data received');
-        throw new Error('No response from decision engine');
+        throw new Error('No response from autonomous agent');
       }
-      
-      // Check if we got the old format by mistake
-      if ('trade_offs' in decisionData || 'insight' in decisionData) {
-        console.error('Received old format response! Expected DecisionEngineResponse but got AnalysisResponse');
-        throw new Error('Backend returned old format. Please check backend endpoint.');
-      }
-      
+
       // Ensure required fields exist (with fallbacks)
-      if (!decisionData.quick_insight) {
-        decisionData.quick_insight = { summary: 'Analysis complete.', uncertainty_reason: null };
-      }
-      if (!decisionData.quick_insight.summary) {
-        decisionData.quick_insight.summary = 'Analysis complete.';
-      }
-      
-      if (!decisionData.verdict) {
-        decisionData.verdict = 'Occasional';
-      }
-      
-      if (!decisionData.explanation) {
-        decisionData.explanation = {
-          verdict: decisionData.verdict,
-          why_this_matters: ['Product analyzed based on ingredient profile'],
-          when_it_makes_sense: 'Consider your individual dietary needs.',
-          what_to_know: 'This analysis is informational.'
+      if (!autonomousData.initial_analysis) {
+        autonomousData.initial_analysis = {
+          insight: 'Analysis complete.',
+          detailed_reasoning: 'Product analyzed.',
+          trade_offs: { pros: [], cons: [] }
         };
       }
-      
-      // Ensure explanation fields exist
-      if (!decisionData.explanation.why_this_matters) {
-        decisionData.explanation.why_this_matters = [];
+
+      if (!autonomousData.workflow_steps) {
+        autonomousData.workflow_steps = [];
       }
-      if (!decisionData.explanation.when_it_makes_sense) {
-        decisionData.explanation.when_it_makes_sense = 'Consider your individual dietary needs.';
-      }
-      if (!decisionData.explanation.what_to_know) {
-        decisionData.explanation.what_to_know = 'This analysis is informational.';
-      }
-      
-      // Ensure we have key_signals
-      if (!decisionData.key_signals) {
-        decisionData.key_signals = [];
-      }
-      
-      // Ensure we have ingredient_translations
-      if (!decisionData.ingredient_translations) {
-        decisionData.ingredient_translations = [];
-      }
-      
-      // Ensure we have uncertainty_flags
-      if (!decisionData.uncertainty_flags) {
-        decisionData.uncertainty_flags = [];
-      }
-      
-      // Ensure intent_classified exists
-      if (!decisionData.intent_classified) {
-        decisionData.intent_classified = 'curiosity';
+
+      if (!autonomousData.synthesis) {
+        autonomousData.synthesis = {
+          executive_summary: 'Analysis completed.',
+          key_takeaways: [],
+          confidence_level: 'medium',
+          next_steps: []
+        };
       }
 
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        type: 'decision',
-        decision: decisionData,
+        type: 'autonomous',
+        autonomousResponse: autonomousData,
         timestamp: new Date(),
       });
     } catch (error: any) {
-      console.error('Decision engine image error:', error);
+      console.error('Autonomous agent error:', error);
       console.error('Error details:', error.response?.data || error.message);
-      
+
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -379,6 +417,7 @@ const Copilot = () => {
       });
     } finally {
       setIsTyping(false);
+      setLoadingProgress(null);
     }
   };
 
@@ -390,7 +429,7 @@ const Copilot = () => {
       <div
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-20 sm:pt-24 pb-24 sm:pb-28 px-2 sm:px-4 space-y-4 sm:space-y-6"
-        style={{ 
+        style={{
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
         }}
@@ -449,6 +488,15 @@ const Copilot = () => {
                   </div>
                 )}
 
+                {/* Autonomous Agent Response - Multi-step Workflow */}
+                {msg.type === 'autonomous' && msg.autonomousResponse ? (
+                  <AutonomousAgentCard response={msg.autonomousResponse} />
+                ) : msg.type === 'autonomous' && (
+                  <div className="p-4 border border-border bg-muted/30 text-sm text-muted-foreground">
+                    🤖 Autonomous analysis in progress...
+                  </div>
+                )}
+
                 {/* Legacy Analysis Format (for backward compatibility) */}
                 {msg.type === 'analysis' && msg.analysis && (
                   <GlassCard variant="green" className="p-6">
@@ -503,8 +551,30 @@ const Copilot = () => {
           {isTyping && (
             <div className="flex gap-2 sm:gap-4">
               <div className="w-7 h-7 sm:w-8 sm:h-8 border border-border shrink-0" />
-              <div className="border border-border px-3 sm:px-4 py-2 sm:py-3 text-sm text-muted-foreground">
-                Thinking…
+              <div className="border border-border px-3 sm:px-4 py-2 sm:py-3 min-w-[200px]">
+                {loadingProgress ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-foreground font-medium">
+                        {loadingProgress.message}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Step {loadingProgress.step}/{loadingProgress.total}
+                      </span>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-primary h-full transition-all duration-500 ease-out"
+                        style={{
+                          width: `${(loadingProgress.step / loadingProgress.total) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Thinking…</span>
+                )}
               </div>
             </div>
           )}

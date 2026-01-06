@@ -25,18 +25,19 @@ class ExplanationAgent:
         """
         if not self.model:
             return QuickInsight(
-                summary=f"This product is rated '{decision.verdict}' based on its ingredient profile.",
+                summary="Product analyzed based on its ingredient profile.",
                 uncertainty_reason=None
             )
 
         system_prompt = """You are a food intelligence assistant.
 
 Generate a ONE-SENTENCE summary that gives instant understanding.
-Be clear, direct, and avoid jargon. Focus on what matters most to the consumer."""
+Be clear, direct, and avoid jargon. Focus on what matters most to the consumer.
+DO NOT use phrases like "frequent use", "infrequently", "should be consumed", or similar consumption frequency language.
+Focus on what the product IS, not how often to eat it."""
 
-        user_prompt = f"""Create a one-sentence summary for this decision:
+        user_prompt = f"""Create a one-sentence summary for this product:
 
-Verdict: {decision.verdict}
 Key Signals: {', '.join(decision.key_signals[:3])}
 Processing Level: {structured_analysis.ingredient_summary.processing_level}
 Sugar Dominant: {structured_analysis.food_properties.sugar_dominant}
@@ -72,10 +73,10 @@ Keep it simple and actionable."""
             if decision.key_signals:
                 signal_summary = decision.key_signals[0].lower()
                 return QuickInsight(
-                    summary=f"{signal_summary} - rated '{decision.verdict}'."
+                    summary=f"{signal_summary} - analyzed based on ingredient profile."
                 )
             return QuickInsight(
-                summary=f"Rated '{decision.verdict}' based on ingredient profile."
+                summary="Analyzed based on ingredient profile."
             )
 
     async def explain(self, decision: Decision) -> ConsumerExplanation:
@@ -85,7 +86,6 @@ Keep it simple and actionable."""
         if not self.model:
             # Fallback explanation
             return ConsumerExplanation(
-                verdict=decision.verdict,
                 why_this_matters=["Processing level affects nutrient availability", "Ingredient composition impacts energy release"],
                 when_it_makes_sense="Consider your individual needs and context",
                 what_to_know="This is informational, not medical advice"
@@ -100,19 +100,18 @@ You MUST:
 - Avoid fear-based tone
 - Avoid medical claims
 - Be concise and actionable
-- Focus on practical implications, not technical details"""
+- Focus on practical implications, not technical details
+- DO NOT use phrases like "frequent use", "infrequently", "should be consumed", or similar consumption frequency language
+- Focus on what the product IS and its characteristics, not consumption frequency"""
 
-        user_prompt = f"""Using the decision below, explain the result to a general consumer.
+        user_prompt = f"""Using the key signals below, explain the product characteristics to a general consumer.
 
-DECISION:
-Verdict: {decision.verdict}
-Key Signals:
+KEY SIGNALS:
 {chr(10).join(f'- {signal}' for signal in decision.key_signals)}
 
 OUTPUT FORMAT (STRICT JSON):
 
 {{
-  "verdict": "{decision.verdict}",
   "why_this_matters": [
     "One short sentence about the most important factor (max 12 words)",
     "One short sentence about the second factor (max 12 words)",
@@ -145,8 +144,9 @@ Keep it simple, practical, and avoid technical jargon."""
             
             data = json.loads(response.text.strip())
             
-            # Ensure verdict matches
-            data["verdict"] = decision.verdict
+            # Remove verdict if present
+            if "verdict" in data:
+                del data["verdict"]
             
             # Limit why_this_matters to 3 items
             if "why_this_matters" in data and isinstance(data["why_this_matters"], list):
@@ -157,7 +157,6 @@ Keep it simple, practical, and avoid technical jargon."""
             print(f"Explanation generation error: {e}")
             # Fallback
             return ConsumerExplanation(
-                verdict=decision.verdict,
                 why_this_matters=decision.key_signals[:3] if len(decision.key_signals) >= 3 else decision.key_signals,
                 when_it_makes_sense="Consider your individual dietary needs and preferences",
                 what_to_know="This analysis is informational and not medical advice"

@@ -86,19 +86,10 @@ class DecisionEngine:
             score -= 0.5
             signals.append("High ingredient count")
         
-        # Determine verdict based on score
-        if score >= 4:
-            verdict = "Daily"
-        elif score >= 1:
-            verdict = "Occasional"
-        else:
-            verdict = "Limit Frequent Use"
-        
         # Keep top 3 most impactful signals
         key_signals = signals[:3] if len(signals) <= 3 else signals[:3]
         
         return Decision(
-            verdict=verdict,
             key_signals=key_signals
         )
 

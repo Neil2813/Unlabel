@@ -5,22 +5,21 @@ Very lightweight classification before processing
 import google.generativeai as genai
 import json
 from typing import Literal
-from config.settings import GEMINI_API_KEY
+from app.ai.key_manager import key_manager
 
 class IntentClassifier:
     def __init__(self):
-        if not GEMINI_API_KEY:
-            self.model = None
+        if not key_manager:
+            self.use_key_manager = False
             return
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.use_key_manager = True
 
     async def classify(self, user_input: str) -> Literal["quick_yes_no", "comparison", "risk_check", "curiosity"]:
         """
         Classify user intent from their input.
         Returns one of: quick_yes_no, comparison, risk_check, curiosity
         """
-        if not self.model:
+        if not self.use_key_manager:
             # Default to curiosity if AI not available
             return "curiosity"
 
@@ -44,18 +43,23 @@ Return JSON only, no other text.
 """
 
         try:
-            import asyncio
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        response_mime_type="application/json",
-                        temperature=0.1  # Low temperature for deterministic classification
+            # Use key manager with automatic fallback
+            async def classify_with_model(model):
+                import asyncio
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: model.generate_content(
+                        prompt,
+                        generation_config=genai.types.GenerationConfig(
+                            response_mime_type="application/json",
+                            temperature=0.1  # Low temperature for deterministic classification
+                        )
                     )
                 )
-            )
+                return response
+            
+            response = await key_manager.execute_with_fallback(classify_with_model)
             
             data = json.loads(response.text.strip())
             intent = data.get("intent", "curiosity")

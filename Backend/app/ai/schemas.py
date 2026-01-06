@@ -47,13 +47,12 @@ class DecisionRequest(BaseModel):
     text: str
     user_intent: Optional[Literal["quick_yes_no", "comparison", "risk_check", "curiosity"]] = None
     include_nutrition: Optional[str] = None  # Optional nutrition info
+    conversation_context: Optional[str] = None  # Previous messages for follow-up queries
 
 class Decision(BaseModel):
-    verdict: Literal["Daily", "Occasional", "Limit Frequent Use"]
     key_signals: List[str]
 
 class ConsumerExplanation(BaseModel):
-    verdict: str
     why_this_matters: List[str]  # Max 3 bullet points
     when_it_makes_sense: str
     what_to_know: str
@@ -74,7 +73,6 @@ class DecisionEngineResponse(BaseModel):
     quick_insight: QuickInsight
     
     # Consumer-facing (primary)
-    verdict: str  # "Daily", "Occasional", or "Limit Frequent Use"
     explanation: ConsumerExplanation
     
     # Supporting information

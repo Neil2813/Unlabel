@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Info, AlertCircle, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { ChevronDown, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GlassCard } from './GlassCard';
 
@@ -15,7 +15,6 @@ interface QuickInsight {
 }
 
 interface ConsumerExplanation {
-  verdict: string;
   why_this_matters: string[];
   when_it_makes_sense: string;
   what_to_know: string;
@@ -23,7 +22,6 @@ interface ConsumerExplanation {
 
 interface DecisionData {
   quick_insight: QuickInsight;
-  verdict: "Daily" | "Occasional" | "Limit Frequent Use" | string; // Allow string for flexibility
   explanation: ConsumerExplanation;
   intent_classified: "quick_yes_no" | "comparison" | "risk_check" | "curiosity" | string;
   key_signals: string[];
@@ -59,43 +57,6 @@ interface DecisionCardProps {
   decision: DecisionData;
 }
 
-const getVerdictConfig = (verdict: string) => {
-  switch (verdict) {
-    case 'Daily':
-      return {
-        icon: CheckCircle2,
-        color: 'text-primary',
-        bgColor: 'bg-primary/20',
-        borderColor: 'border-primary/30',
-        label: 'Daily',
-      };
-    case 'Occasional':
-      return {
-        icon: HelpCircle,
-        color: 'text-foreground',
-        bgColor: 'bg-foreground/10',
-        borderColor: 'border-border',
-        label: 'Occasional',
-      };
-    case 'Limit Frequent Use':
-      return {
-        icon: XCircle,
-        color: 'text-secondary',
-        bgColor: 'bg-secondary/20',
-        borderColor: 'border-secondary/30',
-        label: 'Limit Use',
-      };
-    default:
-      return {
-        icon: Info,
-        color: 'text-foreground',
-        bgColor: 'bg-foreground/10',
-        borderColor: 'border-border',
-        label: verdict,
-      };
-  }
-};
-
 export function DecisionCard({ decision }: DecisionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -107,12 +68,10 @@ export function DecisionCard({ decision }: DecisionCardProps) {
   if (!decision) {
     return <div className="p-4 border border-border">No decision data available</div>;
   }
-  
-  const verdictConfig = getVerdictConfig(decision.verdict);
 
   return (
     <GlassCard
-      variant={decision.verdict === 'Daily' ? 'green' : decision.verdict === 'Occasional' ? 'neutral' : 'red'}
+      variant="neutral"
       className="p-0 overflow-hidden"
     >
       {/* Quick Insight - Always Visible */}
@@ -132,18 +91,6 @@ export function DecisionCard({ decision }: DecisionCardProps) {
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Verdict Badge */}
-          <div className={cn(
-            "flex flex-col items-center justify-center px-4 py-3 rounded-lg border shrink-0",
-            verdictConfig.bgColor,
-            verdictConfig.borderColor
-          )}>
-            <verdictConfig.icon className={cn("w-6 h-6 mb-1", verdictConfig.color)} />
-            <span className={cn("text-xs font-bold uppercase", verdictConfig.color)}>
-              {verdictConfig.label}
-            </span>
           </div>
         </div>
       </div>

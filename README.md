@@ -1,32 +1,83 @@
 # Unlabel
-*An AI-Native Consumer Health Experience*
+*The Only Food Intelligence System with Transparent Autonomous AI Agents*
 
-## 🧠 The Core Question
-**What does a consumer health experience look like when AI is the interface, not a feature?**
+## 🎯 One-Line Value Proposition
 
-Generative AI enables systems that reason, infer intent, and reduce cognitive effort. This project reimagines how people make sense of food ingredients at the moment decisions matter.
+**"The only food intelligence system that combines autonomous AI agents with transparent, explainable decisions - helping consumers understand ingredients without the cognitive overload."**
 
-## 🌟 What Is an "AI-Native" Experience?
+---
 
-Traditional apps are menu-driven, form-based, and data-heavy, requiring significant user effort.
+## 🤖 What Makes Unlabel Revolutionary?
 
-**Our AI-Native System:**
-*   **Intent-First:** Infers what determines value without explicit configuration.
-*   **Reasoning-Driven:** Acts as a co-pilot, not a lookup tool.
-*   **Dynamic Adaptation:** Reasons under uncertainty and adapts responses dynamically.
-*   **Cognitive Offloading:** Does the cognitive work on the user's behalf.
+### **Autonomous Multi-Agent Architecture** (Not Just Another AI App)
 
-## 🚀 Problem Statement
-**The Consumer Health Information Gap**
+Unlabel is **AI-native first** - not an app with AI added on. We use specialized autonomous agents working in coordination, each with a focused role:
 
-Food labels are optimized for regulatory compliance, not human understanding. Usage of long ingredient lists, unfamiliar chemical names, and conflicting health guidance leaves consumers uncertain.
+1. **🎯 Intent Classifier Agent** - Understands your real question (quick yes/no, comparison, risk check, curiosity)
+2. **🔬 Ingredient Interpreter Agent** - Converts ingredients into structured, neutral signals
+3. **⚖️ Decision Engine Agent** - Rule-based, transparent scoring system
+4. **💬 Explanation Agent** - Translates decisions into consumer-friendly language
+5. **📚 Ingredient Translator Agent** - Explains complex scientific terms simply
 
-Existing solutions often:
-*   Surface raw data instead of insight.
-*   Require high-friction manual input.
-*   Treat AI as an add-on.
+**Why This Matters:**
+- ✅ **Transparency**: See exactly which agent made which decision
+- ✅ **Reliability**: If one agent fails, others continue functioning
+- ✅ **Explainability**: Each step is traceable and auditable
+- ✅ **Scalability**: Agents can be improved and scaled independently
 
-**Our Solution:** An intelligent co-pilot that interprets ingredient information, translates complex context into human-level insight, and communicates uncertainty honestly.
+**Competitors**: Single black-box AI model → unexplainable decisions  
+**Unlabel**: Specialized autonomous agents → transparent, explainable, reliable
+
+---
+
+## 🔑 Top 5 Unique Selling Points
+
+### 1. **Transparent Rule-Based Decisions** (Not Black Box AI)
+- **What**: Decisions use explicit, auditable rules you can inspect
+- **Why**: Trust, consistency, regulatory compliance, user education
+- **Example**: *"Rated Occasional because: minimally processed (+3), strong fiber/protein support (+2), added sugars present (-1.5) = score 3.5"*
+
+### 2. **Progressive Disclosure UI** (Minimal Cognitive Load)
+- **What**: Quick insight + verdict first, details on demand
+- **Why**: Fast decisions, no information overload, mobile-friendly
+- **Impact**: **2-second decisions** for quick users, full depth for researchers
+
+### 3. **Ingredient Translation Layer** (Democratizes Knowledge)
+- **What**: Auto-translates complex scientific terms into simple explanations
+- **Why**: No chemistry degree needed, reduces fear, empowers decisions
+- **Example**: *"Sodium Benzoate" → "A preservative that prevents mold and bacteria growth"*
+
+### 4. **Neutral Signal Extraction** (No Agenda)
+- **What**: Extracts facts, not opinions; users decide what matters
+- **Why**: No hidden biases, user autonomy, regulatory safety
+- **Impact**: Pure information without pushing any diet philosophy
+
+### 5. **Honest Uncertainty Communication**
+- **What**: Explicitly flags when information is incomplete or ambiguous
+- **Why**: Honesty builds trust and safety
+- **Example**: Shows confidence notes, ambiguity flags, and uncertainty reasons
+
+---
+
+## 🚀 The Problem We Solve
+
+### **The Consumer Health Information Gap**
+
+Food labels are optimized for regulatory compliance, not human understanding. Long ingredient lists, unfamiliar chemical names, and conflicting health guidance leave consumers uncertain.
+
+**What Existing Solutions Get Wrong:**
+- ❌ Surface raw data instead of insight
+- ❌ Use black-box AI with unexplainable decisions
+- ❌ Create information overload
+- ❌ Require high-friction manual input
+- ❌ Have hidden agendas or diet-specific biases
+
+**What Unlabel Does Differently:**
+- ✅ Transparent autonomous agents with explainable decisions
+- ✅ Progressive disclosure - see only what you need
+- ✅ Intent-aware processing - answers YOUR question
+- ✅ Ingredient translation - complex terms explained simply
+- ✅ Neutral analysis - we inform, you decide
 
 ## 🏗️ Architecture Overview
 
@@ -34,7 +85,7 @@ This project is built as a modern full-stack application connecting a fluid Reac
 
 ### 📂 Project Structure
 ```
-IIT Guwahti/
+Unlabel/
 ├── Frontend/          # React + TypeScript + Tailwind CSS
 ├── Backend/           # FastAPI + SQLAlchemy + Gemini AI
 └── README.md          # This file
@@ -158,23 +209,12 @@ Backend/app/
 
 ### API Endpoints
 
-#### Authentication (`/api/auth`)
-- `POST /register` - Create new user account
-- `POST /login` - Authenticate and receive JWT token
-
 #### AI Analysis (`/api/analyze`)
-- `POST /text` - Analyze ingredient text
-- `POST /image` - Analyze food label image (multimodal)
-- `GET /history` - Get user's analysis history
-- `GET /history/{id}` - Get specific analysis details
-
-#### Food Search (`/api/food`)
-- `GET /search?query={term}` - Search Open Food Facts database
-- `GET /product/{barcode}` - Get detailed product information
-
-#### User Profile (`/api/profile`)
-- `GET /me` - Get current user profile
-- `PUT /me` - Update user profile
+- `POST /autonomous/text` - Autonomous agent text analysis (multi-step workflow)
+- `POST /autonomous/image` - Autonomous agent image analysis (multimodal)
+- `POST /decision` - Transparent Decision Engine (with consumer explanation)
+- `POST /decision/image` - Decision Engine for image input
+- `POST /compare` - Compare two products side-by-side
 
 ### Core Components
 
@@ -253,6 +293,207 @@ analysis_history
 └── created_at
 ```
 
+---
+
+## 🤖 Autonomous Agent System
+
+### **The Transparent Decision Pipeline**
+
+Unlike competitors who use a single "black box" AI, Unlabel employs a **multi-agent system** where each agent has a specific, auditable role:
+
+```
+User Input → Agent Coordination Pipeline → Transparent Output
+```
+
+### **Agent Coordination Flow**
+
+```mermaid
+User Input (Text/Image)
+       ↓
+┌──────────────────────────────────────┐
+│  🎯 Intent Classifier Agent          │
+│  "What is the user really asking?"   │
+│  Output: intent_type, confidence     │
+└──────────────────────────────────────┘
+       ↓
+┌──────────────────────────────────────┐
+│  🔬 Ingredient Interpreter Agent     │
+│  "What are the neutral facts?"       │
+│  Output: structured signals          │
+│  - processing_level: minimal/moderate│
+│  - sugar_dominant: true/false        │
+│  - fiber_protein_support: strong/weak│
+│  - key_nutrients: [...]              │
+└──────────────────────────────────────┘
+       ↓
+┌──────────────────────────────────────┐
+│  ⚖️ Decision Engine Agent            │
+│  "Apply transparent rules"           │
+│  Rule-based scoring (deterministic)  │
+│  Output: verdict, score, reasoning   │
+└──────────────────────────────────────┘
+       ↓
+┌──────────────────────────────────────┐
+│  📚 Ingredient Translator Agent      │
+│  "Explain complex terms simply"      │
+│  Output: ingredient_cards            │
+└──────────────────────────────────────┘
+       ↓
+┌──────────────────────────────────────┐
+│  💬 Explanation Agent                │
+│  "Translate to human language"       │
+│  Output: quick_insight, why_it_matters│
+└──────────────────────────────────────┘
+       ↓
+Structured Response → Frontend → Progressive Disclosure UI
+```
+
+### **Why Multi-Agent Architecture?**
+
+#### **1. Transparency**
+Each agent's decision is recorded and can be audited:
+```json
+{
+  "intent_classification": {
+    "agent": "IntentClassifier",
+    "intent": "quick_yes_no",
+    "confidence": 0.92
+  },
+  "ingredient_analysis": {
+    "agent": "IngredientInterpreter",
+    "signals": {
+      "processing_level": "minimal",
+      "sugar_dominant": false
+    }
+  },
+  "decision": {
+    "agent": "DecisionEngine",
+    "verdict": "Daily",
+    "score": 4.5,
+    "reasoning": "minimally_processed(+3), strong_fiber_protein(+2), no_added_sugars(+0.5)"
+  }
+}
+```
+
+#### **2. Reliability**
+- **Fallback Mechanisms**: If one agent fails, others continue
+- **Error Isolation**: Agent errors don't cascade
+- **Graceful Degradation**: Can provide partial results
+
+#### **3. Explainability**
+- **Audit Trail**: See exactly which agent contributed what
+- **Rule Transparency**: Decision Engine uses explicit rules, not learned weights
+- **Confidence Tracking**: Each agent reports confidence levels
+
+#### **4. Scalability**
+- **Independent Scaling**: Scale agents based on their specific load
+- **Parallel Processing**: Multiple agents can work simultaneously
+- **Easy Updates**: Improve one agent without affecting others
+
+### **Agent Implementation Details**
+
+#### **Intent Classifier Agent**
+```python
+# Classifies user intent before processing
+Intent Types:
+  - quick_yes_no: "Is this healthy?"
+  - comparison: "Which is better?"
+  - risk_check: "Is this safe for me?"
+  - curiosity: "Tell me about this product"
+
+Output: { intent_type, confidence, focus_areas[] }
+```
+
+#### **Ingredient Interpreter Agent**
+```python
+# Extracts neutral, structured signals
+Signals Extracted:
+  - processing_level: minimal/moderate/ultra
+  - sugar_dominant: boolean
+  - fiber_protein_support: none/weak/moderate/strong
+  - key_nutrients: array
+  - allergens: array
+  - additives: array
+
+Output: { signals, confidence_notes, ambiguity_flags[] }
+```
+
+#### **Decision Engine Agent**
+```python
+# Rule-based, deterministic scoring
+Scoring Rules (Transparent):
+  minimally_processed → +3 points
+  strong_fiber_protein → +2 points
+  moderate_fiber_protein → +1 point
+  added_sugars_present → -1.5 points
+  sugar_dominant → -2 points
+  ultra_processed → -3 points
+
+Verdict Thresholds:
+  Daily: score >= 4
+  Occasional: score >= 1
+  Limit: score < 1
+
+Output: { verdict, score, key_signals[], reasoning }
+```
+
+#### **Ingredient Translator Agent**
+```python
+# Translates complex terms to simple language
+Input: "Sodium Benzoate, Xanthan Gum, Ascorbic Acid"
+
+Output: {
+  "Sodium Benzoate": {
+    "simple_name": "Preservative",
+    "function": "Prevents mold and bacteria growth",
+    "safety": "Generally recognized as safe (GRAS)"
+  },
+  "Xanthan Gum": {
+    "simple_name": "Emulsifier",
+    "function": "Helps ingredients blend smoothly",
+    "derived_from": "Fermented sugars"
+  },
+  "Ascorbic Acid": {
+    "simple_name": "Vitamin C",
+    "function": "Antioxidant and preservative",
+    "benefit": "Essential nutrient"
+  }
+}
+```
+
+#### **Explanation Agent**
+```python
+# Generates consumer-friendly explanations
+Input: Structured decision data
+Output: {
+  "quick_insight": "One sentence (max 15 words)",
+  "why_it_matters": "Actionable context (2-3 bullets, max 12 words each)",
+  "when_it_makes_sense": "Usage context",
+  "what_to_know": "Important caveats"
+}
+
+Style Guidelines:
+  - Concise (max word limits enforced)
+  - Simple (no jargon)
+  - Actionable ("Pair with protein" not "Consider macronutrient balance")
+  - Calm (no fear-mongering)
+```
+
+### **Competitive Comparison**
+
+| Feature | Unlabel (Multi-Agent) | Competitors (Single AI) |
+|---------|-----------------------|-------------------------|
+| **Decision Transparency** | ✅ Each agent's contribution visible | ❌ Black box output |
+| **Auditability** | ✅ Full audit trail | ❌ Cannot explain decisions |
+| **Error Handling** | ✅ Graceful degradation | ❌ Complete failure |
+| **Scalability** | ✅ Independent agent scaling | ⚠️ Monolithic scaling |
+| **Maintainability** | ✅ Update agents independently | ❌ Retrain entire model |
+| **Cost Efficiency** | ✅ Rules for decisions (no LLM cost) | ❌ LLM for all processing |
+| **Consistency** | ✅ Deterministic decisions | ❌ Variable outputs |
+| **Explainability** | ✅ Traceable reasoning | ❌ "AI says so" |
+
+---
+
 
 ## ⚡ Workflow
 1.  **Conversational Input:** User chats with the AI or shows a label in a fluid message stream.
@@ -284,192 +525,33 @@ analysis_history
     npm run dev
     ```
 
-## 🎯 Key Features
-*   **Multimodal Analysis:** Understands both text and images.
-*   **Partial Data Resilience:** Can read partially obscured or blurry labels.
-*   **Tone & Safety:** Avoids alarmist language; strictly distinct from medical advice.
-*   **History Tracking:** Saves past analyses for longitudinal insights.
-*   **Global Food Database:** Search and explore 3+ million products from Open Food Facts.
+## 🎯 Key Capabilities & Differentiators
 
----
+### **Autonomous Agent Features**
+*   **🤖 Multi-Agent Coordination:** Five specialized agents working transparently together
+*   **🔍 Intent-Aware Processing:** Classifies what you're really asking before analyzing
+*   **⚖️ Rule-Based Transparency:** See exactly how decisions are scored (+3, -1.5, etc.)
+*   **📊 Structured Signal Extraction:** Converts ingredients to neutral, auditable facts
+*   **🎓 Automatic Ingredient Translation:** Complex scientific terms explained simply
 
-## 🔮 Future Scope
+### **User Experience Features**
+*   **⚡ 2-Second Decisions:** Quick insight + verdict for fast choices
+*   **📖 Progressive Disclosure:** Details only when you want them - no information overload
+*   **🎨 Visual Clarity:** Color-coded verdict badges (Daily/Occasional/Limit)
+*   **💬 Conversational Interface:** Chat naturally with the AI copilot
+*   **🔄 Intent Adaptation:** Response style matches your question type
 
-### 🎯 Enhanced AI Capabilities
-1. **Personalized Health Recommendations**
-   - User health profiles (allergies, dietary restrictions, health goals)
-   - Personalized ingredient analysis based on individual needs
-   - Custom alerts for specific ingredients or allergens
-   - Dietary preference tracking (vegan, gluten-free, keto, etc.)
+### **Technical Features**
+*   **📸 Multimodal Analysis:** Understands both text and images
+*   **🌐 Partial Data Resilience:** Can read partially obscured or blurry labels
+*   **✅ Honest Uncertainty:** Explicitly flags when information is incomplete
+*   **📚 History Tracking:** Saves past analyses for longitudinal insights
+*   **🌍 Global Food Database:** Search and explore 3+ million products from Open Food Facts
 
-2. **Advanced AI Features**
-   - Multi-language support for global ingredient labels
-   - Voice input for hands-free analysis
-   - Comparative analysis (compare multiple products side-by-side)
-   - Trend analysis (track nutritional choices over time)
-   - AI-powered meal planning based on analyzed products
+### **Trust & Safety Features**
+*   **🎯 No Hidden Agenda:** Neutral analysis without diet-specific biases
+*   **⚖️ Regulatory Compliant:** Avoids medical claims, provides information not advice
+*   **🔒 Audit Trail:** Every agent decision is traceable and explainable
+*   **📏 Consistent Results:** Deterministic decision engine (same input = same output)
+*   **💯 User Autonomy:** We inform, you decide what matters to you
 
-3. **Enhanced Computer Vision**
-   - Real-time barcode scanning with instant lookup
-   - OCR improvements for better label reading accuracy
-   - Batch scanning (analyze multiple products at once)
-   - Augmented Reality overlay for in-store shopping
-
-### 📊 Data & Analytics
-1. **User Insights Dashboard**
-   - Nutritional intake tracking over time
-   - Visualization of eating patterns
-   - Health score trends
-   - Ingredient frequency analysis
-   - Personalized health reports
-
-2. **Community Features**
-   - Product reviews and ratings
-   - User-contributed product information
-   - Community health insights
-   - Social sharing of analyses
-   - Expert nutritionist Q&A
-
-3. **Advanced Search & Discovery**
-   - Filter by nutrition grade, allergens, dietary preferences
-   - Product recommendations based on history
-   - "Find alternatives" feature for healthier options
-   - Price comparison across retailers
-   - Sustainability and eco-score filtering
-
-### 🏪 E-commerce Integration
-1. **Shopping Features**
-   - Direct purchase links to online retailers
-   - Shopping list creation from analyzed products
-   - Price tracking and alerts
-   - Subscription management for regular purchases
-   - Integration with grocery delivery services
-
-2. **Retailer Partnerships**
-   - In-store navigation to healthier alternatives
-   - Exclusive deals on recommended products
-   - Loyalty program integration
-   - Digital receipt analysis
-
-### 🔬 Advanced Health Features
-1. **Medical Integration**
-   - Integration with health tracking apps (Apple Health, Google Fit)
-   - Medication interaction warnings
-   - Blood sugar impact predictions
-   - Calorie and macro tracking
-   - Integration with fitness goals
-
-2. **Professional Tools**
-   - Nutritionist dashboard for client management
-   - Meal plan creation tools
-   - Clinical trial data integration
-   - Research paper citations for ingredients
-   - Export reports for healthcare providers
-
-### 🌍 Sustainability & Ethics
-1. **Environmental Impact**
-   - Carbon footprint calculation per product
-   - Packaging sustainability scores
-   - Local vs. imported product indicators
-   - Seasonal availability information
-   - Water usage and environmental impact data
-
-2. **Ethical Sourcing**
-   - Fair trade certification tracking
-   - Animal welfare scores
-   - Labor practice transparency
-   - Supply chain traceability
-   - Corporate responsibility ratings
-
-### 🔐 Enterprise & B2B Features
-1. **Business Solutions**
-   - API access for third-party developers
-   - White-label solutions for retailers
-   - Bulk analysis for food manufacturers
-   - Compliance checking for regulatory requirements
-   - Product development insights
-
-2. **Educational Tools**
-   - Nutrition education modules
-   - Gamification for healthy eating habits
-   - School and university partnerships
-   - Interactive learning experiences
-   - Certification programs
-
-### 🚀 Technical Enhancements
-1. **Performance & Scalability**
-   - Migration to PostgreSQL for production
-   - Redis caching for faster responses
-   - CDN integration for global performance
-   - Microservices architecture
-   - GraphQL API option
-
-2. **Mobile Applications**
-   - Native iOS app (Swift/SwiftUI)
-   - Native Android app (Kotlin/Jetpack Compose)
-   - Offline mode with local AI models
-   - Push notifications for product recalls
-   - Wearable device integration
-
-3. **Advanced Security**
-   - Two-factor authentication (2FA)
-   - Biometric authentication
-   - End-to-end encryption for health data
-   - GDPR and HIPAA compliance
-   - Data anonymization options
-
-### 🤖 AI Model Improvements
-1. **Model Enhancements**
-   - Fine-tuned models for specific dietary needs
-   - Ensemble models for higher accuracy
-   - Continuous learning from user feedback
-   - Multi-modal fusion (text + image + voice)
-   - Explainable AI for transparency
-
-2. **New AI Capabilities**
-   - Recipe generation from available ingredients
-   - Meal compatibility suggestions
-   - Cooking instruction generation
-   - Nutritional deficiency detection
-   - Predictive health modeling
-
-### 🌐 Global Expansion
-1. **Internationalization**
-   - Support for 50+ languages
-   - Regional food databases
-   - Local dietary guidelines integration
-   - Cultural food preferences
-   - International nutrition standards
-
-2. **Market Expansion**
-   - Restaurant menu analysis
-   - Food service industry tools
-   - Catering and event planning features
-   - School cafeteria nutrition tracking
-   - Hospital meal planning integration
-
-### 📱 Integration Ecosystem
-1. **Smart Home Integration**
-   - Smart refrigerator connectivity
-   - Pantry management systems
-   - Automated grocery ordering
-   - Recipe suggestions based on available items
-   - Expiration date tracking
-
-2. **Third-Party Integrations**
-   - Fitness app synchronization
-   - Meal kit service integration
-   - Restaurant reservation platforms
-   - Food delivery app partnerships
-   - Health insurance provider connections
-
----
-
-## 🎓 Research & Innovation Opportunities
-- **Academic Partnerships**: Collaborate with nutrition science departments
-- **Clinical Studies**: Conduct research on AI-assisted dietary decisions
-- **Open Source Contributions**: Release components for community development
-- **AI Ethics**: Develop frameworks for responsible AI in health tech
-- **Accessibility**: Ensure inclusive design for users with disabilities
-
----
