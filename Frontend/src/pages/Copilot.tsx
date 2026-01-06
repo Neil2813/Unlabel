@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { AIInput } from '@/components/ui/AIInput';
 import { FoodScanner } from '@/components/ui/FoodScanner';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { DecisionCard } from '@/components/ui/DecisionCard';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
 
 // Types
@@ -21,28 +20,97 @@ interface AnalysisResult {
   uncertainty_note?: string;
 }
 
+// New Decision Engine Types - Matching Backend Schemas
+interface IngredientTranslation {
+  term: string;
+  simple_explanation: string;
+  category: string;
+}
+
+interface QuickInsight {
+  summary: string;
+  uncertainty_reason?: string | null;
+}
+
+interface ConsumerExplanation {
+  verdict: string;
+  why_this_matters: string[]; // Max 3 bullet points
+  when_it_makes_sense: string;
+  what_to_know: string;
+}
+
+// Structured Analysis Types (for technical details)
+interface IngredientSummary {
+  primary_components: string[];
+  added_sugars_present: boolean;
+  sweetener_type: "none" | "natural" | "added" | "mixed";
+  fiber_level: "none" | "low" | "moderate" | "high";
+  protein_level: "none" | "low" | "moderate" | "high";
+  fat_level: "none" | "low" | "moderate" | "high";
+  processing_level: "low" | "moderate" | "high";
+  ultra_processed_markers: string[];
+  ingredient_count: number;
+}
+
+interface FoodProperties {
+  sugar_dominant: boolean;
+  fiber_protein_support: "none" | "weak" | "moderate" | "strong";
+  energy_release_pattern: "rapid" | "mixed" | "slow";
+  satiety_support: "low" | "moderate" | "high";
+  formulation_complexity: "simple" | "moderate" | "complex";
+}
+
+interface ConfidenceNotes {
+  data_completeness: "high" | "medium" | "low";
+  ambiguity_flags: string[];
+}
+
+interface StructuredIngredientAnalysis {
+  ingredient_summary: IngredientSummary;
+  food_properties: FoodProperties;
+  confidence_notes: ConfidenceNotes;
+}
+
+interface DecisionRequest {
+  text: string;
+  user_intent?: "quick_yes_no" | "comparison" | "risk_check" | "curiosity" | null;
+  include_nutrition?: string | null;
+}
+
+interface DecisionEngineResponse {
+  // Instant understanding (show first)
+  quick_insight: QuickInsight;
+  
+  // Consumer-facing (primary)
+  verdict: "Daily" | "Occasional" | "Limit Frequent Use";
+  explanation: ConsumerExplanation;
+  
+  // Supporting information
+  intent_classified: "quick_yes_no" | "comparison" | "risk_check" | "curiosity";
+  key_signals: string[]; // Top signals that influenced the decision
+  
+  // Ingredient translation (explain complex terms)
+  ingredient_translations: IngredientTranslation[];
+  
+  // Uncertainty flags
+  uncertainty_flags: string[];
+  
+  // Technical details (optional, for transparency/debugging)
+  structured_analysis?: StructuredIngredientAnalysis | null;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'ai';
-  type: 'text' | 'image' | 'analysis';
+  type: 'text' | 'image' | 'analysis' | 'decision';
   content?: string;
   imagePreview?: string;
-  analysis?: AnalysisResult;
+  analysis?: AnalysisResult; // Legacy format
+  decision?: DecisionEngineResponse; // New decision engine format
   timestamp: Date;
 }
 
-interface HistoryDetail {
-  id: string;
-  full_result: AnalysisResult;
-  input_type: 'text' | 'image';
-  input_content: string;
-  title?: string;
-}
-
 const Copilot = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -58,64 +126,6 @@ const Copilot = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Load History
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchHistory = async () => {
-      setIsTyping(true);
-      try {
-        const response = await api.get<HistoryDetail>(`/analyze/history/${id}`);
-        const data = response.data;
-
-        const historyMessages: Message[] = [];
-
-        if (data.input_type === 'image') {
-          historyMessages.push({
-            id: `hist-${data.id}-user`,
-            role: 'user',
-            type: 'image',
-            content: 'Analyzed Image',
-            timestamp: new Date(),
-          });
-        } else {
-          historyMessages.push({
-            id: `hist-${data.id}-user`,
-            role: 'user',
-            type: 'text',
-            content: data.input_content,
-            timestamp: new Date(),
-          });
-        }
-
-        historyMessages.push({
-          id: `hist-${data.id}-ai`,
-          role: 'ai',
-          type: 'analysis',
-          analysis: data.full_result,
-          timestamp: new Date(),
-        });
-
-        setMessages((prev) => [prev[0], ...historyMessages]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'error',
-            role: 'ai',
-            type: 'text',
-            content: "I couldn't retrieve that past conversation.",
-            timestamp: new Date(),
-          },
-        ]);
-      } finally {
-        setIsTyping(false);
-      }
-    };
-
-    fetchHistory();
-  }, [id]);
 
   // Auto-scroll
   useEffect(() => {
@@ -140,21 +150,75 @@ const Copilot = () => {
     setIsTyping(true);
 
     try {
-      const response = await api.post('/analyze/text', { text });
+      // Use new decision engine endpoint - DO NOT fall back to old endpoint
+      const request: DecisionRequest = { text };
+      console.log('Calling /analyze/decision with:', request);
+      
+      const response = await api.post<DecisionEngineResponse>('/analyze/decision', request);
+      
+      // Ensure response data matches expected structure
+      const decisionData: DecisionEngineResponse = response.data;
+      
+      // Log for debugging
+      console.log('Decision engine response:', decisionData);
+      console.log('Response keys:', Object.keys(decisionData));
+      
+      // Validate that we have the required fields
+      if (!decisionData) {
+        console.error('No response data received');
+        throw new Error('No response from decision engine');
+      }
+      
+      // Check if we got the old format by mistake (has trade_offs instead of explanation)
+      if ('trade_offs' in decisionData || 'insight' in decisionData) {
+        console.error('Received old format response! Expected DecisionEngineResponse but got AnalysisResponse');
+        throw new Error('Backend returned old format. Please check backend endpoint.');
+      }
+      
+      // Ensure required fields exist (with fallbacks)
+      if (!decisionData.quick_insight) {
+        decisionData.quick_insight = { summary: 'Analysis complete.', uncertainty_reason: null };
+      }
+      if (!decisionData.verdict) {
+        decisionData.verdict = 'Occasional';
+      }
+      if (!decisionData.explanation) {
+        decisionData.explanation = {
+          verdict: decisionData.verdict,
+          why_this_matters: ['Product analyzed based on ingredient profile'],
+          when_it_makes_sense: 'Consider your individual dietary needs.',
+          what_to_know: 'This analysis is informational.'
+        };
+      }
+      
+      // Ensure we have key_signals
+      if (!decisionData.key_signals) {
+        decisionData.key_signals = [];
+      }
+      if (!decisionData.ingredient_translations) {
+        decisionData.ingredient_translations = [];
+      }
+      if (!decisionData.uncertainty_flags) {
+        decisionData.uncertainty_flags = [];
+      }
+      
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        type: 'analysis',
-        analysis: response.data,
+        type: 'decision',
+        decision: decisionData,
         timestamp: new Date(),
       });
-    } catch {
+    } catch (error: any) {
+      console.error('Decision engine error:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'ai',
         type: 'text',
         content:
-          "I'm having trouble connecting to my reasoning engine right now. Please try again.",
+          `I'm having trouble connecting to my reasoning engine right now. Error: ${error.message || 'Unknown error'}. Please check the console for details.`,
         timestamp: new Date(),
       });
     } finally {
@@ -177,6 +241,8 @@ const Copilot = () => {
     setIsTyping(true);
 
     try {
+      // For images, we'll still use the legacy endpoint for now
+      // TODO: Update backend to support image input for decision engine
       const formData = new FormData();
       formData.append('file', file);
 
@@ -232,13 +298,13 @@ const Copilot = () => {
                   />
                 ) : (
                   <span className="text-xs font-medium text-foreground">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    U
                   </span>
                 )}
               </div>
 
               {/* Content */}
-              <div className={cn('max-w-[85%]', msg.type === 'analysis' && 'w-full')}>
+              <div className={cn('max-w-[85%]', (msg.type === 'analysis' || msg.type === 'decision') && 'w-full')}>
                 {msg.type === 'text' && (
                   <div
                     className={cn(
@@ -258,6 +324,16 @@ const Copilot = () => {
                   </div>
                 )}
 
+                {/* New Decision Engine Response - AI-Native Design */}
+                {msg.type === 'decision' && msg.decision ? (
+                  <DecisionCard decision={msg.decision} />
+                ) : msg.type === 'decision' && (
+                  <div className="p-4 border border-border bg-muted/30 text-sm text-muted-foreground">
+                    Decision data is loading...
+                  </div>
+                )}
+
+                {/* Legacy Analysis Format (for backward compatibility) */}
                 {msg.type === 'analysis' && msg.analysis && (
                   <GlassCard variant="green" className="p-6">
                     <h3 className="font-display text-xl mb-3">
