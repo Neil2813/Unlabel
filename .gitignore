@@ -1,0 +1,24 @@
+# Environment variables - ignore ALL .env files in entire project
+**/.env
+**/.env.*
+!**/.env.example
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS files
+.DS_Store
+Thumbs.db
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
