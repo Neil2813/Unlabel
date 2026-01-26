@@ -1,23 +1,22 @@
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import json
-from config.settings import GEMINI_API_KEY
+from app.ai.key_manager import key_manager
 from app.ai.schemas import AnalysisResponse, TradeOff
 
 class FoodReasoningEngine:
     def __init__(self):
-        if not GEMINI_API_KEY:
-            print("WARNING: GEMINI_API_KEY not set. AI features will fail.")
-            self.client = None
+        # Use key_manager for automatic API key fallback
+        if not key_manager:
+            print("WARNING: Key manager not initialized. AI features will fail.")
+            self.use_key_manager = False
             return
-            
-        self.client = genai.Client(api_key=GEMINI_API_KEY)
-        # Using gemini-2.5-flash as per available models
-        self.model_id = 'gemini-2.5-flash'
+        
+        self.use_key_manager = True
+        print("✅ FoodReasoningEngine initialized with key_manager (multi-key fallback enabled)")
 
-    async def _generate_analysis(self, user_content: list) -> AnalysisResponse:
+    async def _generate_analysis(self, prompt: str, image_data: bytes = None, mime_type: str = None) -> AnalysisResponse:
         """Shared helper to run generation on text or [text, image] inputs."""
-        if not self.client:
+        if not self.use_key_manager:
             raise ValueError("AI Service not configured (Missing API Key)")
 
         system_instruction = """
@@ -50,14 +49,34 @@ class FoodReasoningEngine:
         """
 
         try:
-            response = await self.client.aio.models.generate_content(
-                model=self.model_id,
-                contents=user_content,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    response_mime_type="application/json"
+            import asyncio
+            
+            # Prepare content
+            if image_data:
+                import PIL.Image
+                import io
+                image = PIL.Image.open(io.BytesIO(image_data))
+                contents = [system_instruction, prompt, image]
+            else:
+                contents = [system_instruction, prompt]
+            
+            # Define the function to execute with key fallback
+            async def execute_analysis(model):
+                """Execute the analysis with a specific model instance"""
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: model.generate_content(
+                        contents,
+                        generation_config=genai.types.GenerationConfig(
+                            response_mime_type="application/json"
+                        )
+                    )
                 )
-            )
+                return response
+            
+            # Use key_manager with automatic fallback
+            response = await key_manager.execute_with_fallback(execute_analysis)
             
             # With response_mime_type="application/json", text should be valid JSON
             clean_text = response.text.strip()
@@ -73,7 +92,7 @@ class FoodReasoningEngine:
                 uncertainty_note=data.get("uncertainty_note")
             )
         except Exception as e:
-            print(f"AI Error: {e}")
+            print(f"AI Error (all keys failed): {e}")
             return AnalysisResponse(
                 insight="Could not analyze at this moment.",
                 detailed_reasoning=f"The reasoning engine encountered an error: {str(e)}",
@@ -86,12 +105,10 @@ class FoodReasoningEngine:
         Ingredients to analyze:
         "{text}"
         """
-        return await self._generate_analysis([prompt])
+        return await self._generate_analysis(prompt)
 
     async def analyze_image(self, image_data: bytes, mime_type: str) -> AnalysisResponse:
-        image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
         prompt = "Analyze this food label image."
-        # Input to generate_content can be a list of parts/strings
-        return await self._generate_analysis([prompt, image_part])
+        return await self._generate_analysis(prompt, image_data, mime_type)
 
 ai_service = FoodReasoningEngine()

@@ -6,8 +6,16 @@
 # Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+*.db
+*.sqlite
+*.sqlite3
 
-# Node
 node_modules/
 dist/
+
+# Environment variables - ignore ALL .env files
 .env
+.env.*
+!.env.example
